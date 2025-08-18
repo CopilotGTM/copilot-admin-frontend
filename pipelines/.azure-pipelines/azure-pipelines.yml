@@ -1,16 +1,16 @@
 # Azure DevOps YAML Pipeline – Multi-environment Deployment for Azure App Service
 
-# trigger:
-#   branches:
-#     include:
-#       - main
-#       - dev
+trigger:
+  branches:
+    include:
+      - main
+      - dev
 
-# pr:
-#   branches:
-#     include:
-#       - main
-#       - dev
+pr:
+  branches:
+    include:
+      - main
+      - dev
 
 variables:
   # Common variables
