@@ -1,12 +1,6 @@
-"use client";
-
 import { Flex } from "@chakra-ui/react";
-import { redirect } from "next/navigation";
 // cleaned unused imports
 
-const Home: React.FC = () => {
-  redirect("/organizations");
+export default function Home(){
   return <Flex />;
 };
-
-export default Home;

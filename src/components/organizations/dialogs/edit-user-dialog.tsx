@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { Button, CloseButton, Dialog, Portal, Input, Text, Box, Separator, InputGroup, Icon } from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Portal, Input, Box, Separator, InputGroup, Icon } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Mail, User as UserIcon, Briefcase, IdCard } from "lucide-react";
+import { User as UserIcon, Briefcase, IdCard } from "lucide-react";
 import type { UserListItem, UpdateUserDetailsRequest } from "../../../lib/org-member";
 
 const editUserSchema = z.object({
@@ -29,6 +30,7 @@ export default function EditUserDialog({ trigger, user, onUpdate }: EditUserDial
     handleSubmit,
     formState: { isSubmitting, isValid },
   } = useForm<EditUserInput>({
+    resolver: zodResolver(editUserSchema),
     mode: "onChange",
     defaultValues: {
       first_name: user.first_name,

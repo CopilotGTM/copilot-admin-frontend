@@ -27,7 +27,7 @@ const statusColor: Record<OrgRow["status"], string> = {
   deactivated: "gray",
 };
 
-const OrganizationsPage: React.FC = () => {
+export default function OrganizationsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -315,6 +315,4 @@ const OrganizationsPage: React.FC = () => {
       {/* Delete Confirmation handled via reusable AlertDialog per-row */}
     </Box>
   );
-};
-
-export default OrganizationsPage;
+}

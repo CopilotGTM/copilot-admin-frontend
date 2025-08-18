@@ -2,9 +2,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import RestQueryClientProvider from "../../components/HOC/restQueryClientProvider/RestQueryClientProvider";
 import CollapsibleSidebar from "../../components/sidebar";
-import SidebarConversations from "../../components/sidebar-conversations";
 import { useState } from "react";
-import { usePanelStore } from "../stores/use-panel-store";
 
 export default function GTMRootLayout({
   children,
@@ -13,13 +11,8 @@ export default function GTMRootLayout({
 }) {
   const [isMainSidebarCollapsed, setIsMainSidebarCollapsed] =
     useState<boolean>(true);
-  const [isConversationsSidebarCollapsed, setIsConversationsSidebarCollapsed] =
-    useState<boolean>(false);
-
-  const { isPanelOpen } = usePanelStore();
 
   // Calculate the left margin for content area based on sidebar widths
-  const conversationSidebarWidth = isConversationsSidebarCollapsed ? 80 : 280;
   const mainSidebarWidth = isMainSidebarCollapsed ? 64 : 240;
   //const overlapAmount = 20;
   const totalSidebarWidth =
