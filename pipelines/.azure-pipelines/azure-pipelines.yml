@@ -20,24 +20,7 @@ variables:
     value: '$(Build.BuildId)'
   - name: vmImageName
     value: 'ubuntu-latest'
-
-  - ${{ if endsWith(variables['Build.DefinitionName'], '-prod') }}:
-    - group: app-secrets-prod
-    - name: DEPLOY_ENVIRONMENT
-      value: production
-    - name: ACR_LOGIN_SERVER
-      value: copilotgtmacrprod.azurecr.io
-    - name: ACR_SERVICE_CONNECTION
-      value: copilotgtm-acr-connection-prod
-
-  - ${{ else }}:
-    - group: app-secrets-dev
-    - name: DEPLOY_ENVIRONMENT
-      value: dev
-    - name: ACR_LOGIN_SERVER
-      value: copilotgtmacrdev.azurecr.io
-    - name: ACR_SERVICE_CONNECTION
-      value: copilotgtm-acr-connection-dev
+  
 
 stages:
 - stage: BuildAndPush
