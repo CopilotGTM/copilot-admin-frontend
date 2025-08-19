@@ -2,7 +2,7 @@
 FROM node:lts AS builder
 
 # — build-time args (defaults)
-ARG NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com
+ARG NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com/admin
 
 # — make them available to Next.js at build time
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
@@ -22,7 +22,7 @@ FROM node:lts-alpine AS runner
 
 # runtime ENV
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com
+ENV NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com/admin
 
 
 WORKDIR /app
