@@ -2,10 +2,10 @@
 FROM node:lts AS builder
 
 # — build-time args (defaults)
-ARG API_URL=https://devapi.copilotgtm.com
+ARG NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com/admin
 
 # — make them available to Next.js at build time
-ENV API_URL=${API_URL}
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 WORKDIR /app
 COPY package*.json yarn.lock ./
@@ -22,7 +22,7 @@ FROM node:lts-alpine AS runner
 
 # runtime ENV
 ENV NODE_ENV=production
-ENV API_URL=https://devapi.copilotgtm.com
+ENV NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com/admin
 
 
 WORKDIR /app

@@ -5,7 +5,7 @@ import { Button, CloseButton, Dialog, Portal, Input, Text, Box, Separator, Input
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createUserSchema, type CreateUserInput } from "../../../app/schemas/users";
+import { createUserSchema, type CreateUserInput } from "@/modules/users/schemas";
 import { Mail, User as UserIcon, Briefcase, IdCard } from "lucide-react";
 
 export interface CreateUserDialogProps {
@@ -14,7 +14,7 @@ export interface CreateUserDialogProps {
   onCreate: (values: CreateUserInput) => Promise<void>;
 }
 
-export default function CreateUserDialog({ trigger, organisationId, onCreate }: CreateUserDialogProps) {
+export default function CreateUserDialog({ trigger, organisationId, onCreate }: Readonly<CreateUserDialogProps>) {
   const {
     register,
     handleSubmit,

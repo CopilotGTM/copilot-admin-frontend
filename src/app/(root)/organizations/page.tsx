@@ -1,21 +1,32 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Box, Flex, Text, Button, Stack, Icon, Skeleton, HStack, Badge, IconButton, Menu, Portal } from "@chakra-ui/react";
-import PageHeader from "../../../components/page-header";
-import { Column, CustomTable } from "../../../components/ui/custom-table";
+import { Box, Flex, Text, Button, Stack, Icon, Skeleton, HStack, Badge, IconButton, Menu, Portal, Dialog } from "@chakra-ui/react";
+import { PageHeader } from "@/components/layout";
+import { Column, CustomTable } from "@/components/ui/custom-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listOrganizations, OrganizationListItem, createOrganization, updateOrganization, deleteOrganization, updateOrganizationStatus, type CreateOrganizationRequest, type OrganizationSummary, type UpdateOrganizationRequest, type OrganizationDetail } from "../../../lib/organizations";
-import { CreateOrgDialog } from "../../../components/organizations/dialogs/create-org-dialog";
+import { 
+  listOrganizations, 
+  createOrganization, 
+  updateOrganization, 
+  deleteOrganization, 
+  updateOrganizationStatus 
+} from "@/modules/organizations/api";
+import type { 
+  OrganizationListItem, 
+  CreateOrganizationRequest, 
+  OrganizationSummary, 
+  UpdateOrganizationRequest, 
+  OrganizationDetail 
+} from "@/modules/organizations/types";
+import { CreateOrgDialog } from "@/components/organizations/dialogs/create-org-dialog";
 import { Plus, SearchX, Eye, Pencil, Trash2, MoreVertical } from "lucide-react";
-import { useColorModeValue } from "../../../components/ui/color-mode";
-
-import { Dialog } from "@chakra-ui/react";
+import { useColorModeValue } from "@/components/ui/color-mode";
 import { useRouter } from "next/navigation";
-import ViewOrgDialog from "../../../components/organizations/dialogs/view-org-dialog";
-import EditOrgDialog from "../../../components/organizations/dialogs/edit-org-dialog";
-import { toaster } from "../../../components/ui/toaster";
-import AlertDialog from "../../../components/ui/alert-dialog";
+import ViewOrgDialog from "@/components/organizations/dialogs/view-org-dialog";
+import EditOrgDialog from "@/components/organizations/dialogs/edit-org-dialog";
+import { toaster } from "@/components/ui/toaster";
+import AlertDialog from "@/components/ui/alert-dialog";
 
 type OrgRow = OrganizationListItem & { id: string };
 
@@ -73,7 +84,6 @@ export default function OrganizationsPage() {
   );
 
   const [viewOrg, setViewOrg] = useState<OrgRow | null>(null);
-  // const [deleteOrg, setDeleteOrg] = useState<OrgRow | null>(null);
 
   const columns: Column<OrgRow>[] = [
     {
@@ -152,12 +162,12 @@ export default function OrganizationsPage() {
                       Approve Organization
                     </Menu.Item>
                   ) : (
-                    <Menu.Item value="disable" onClick={() => {/* TODO: disable org */}}>
+                    <Menu.Item value="disable" onClick={() => { console.log("Disable org", o.organisation_id); }}>
                       Disable Organization
                     </Menu.Item>
                   )}
                   <Menu.Separator />
-                  <Menu.Item value="more" onClick={() => {/* TODO: more options */}}>
+                  <Menu.Item value="more" onClick={() => { console.log("More options", o.organisation_id); }}>
                     More options
                   </Menu.Item>
                 </Menu.Content>
@@ -210,8 +220,8 @@ export default function OrganizationsPage() {
             <Skeleton height="40px" rounded="md" />
             <Box borderWidth="1px" borderColor={cardBorder} rounded="lg" p={4}>
               <Stack gap={3}>
-                {[...Array(6)].map((_, i) => (
-                  <HStack key={i} gap={3}>
+                {["a", "b", "c", "d", "e", "f"].map((key) => (
+                  <HStack key={key} gap={3}>
                     <Skeleton height="24px" flex={2} rounded="md" />
                     <Skeleton height="24px" flex={1} rounded="md" />
                     <Skeleton height="24px" flex={1} rounded="md" />
@@ -222,14 +232,16 @@ export default function OrganizationsPage() {
               </Stack>
             </Box>
           </Stack>
-        ) : isError ? (
+        ) : null}
+        {!isLoading && isError ? (
           <Stack align="center" justify="center" py={16} gap={4} textAlign="center">
             <Text fontSize="lg" color="red.500">
-              {(error as Error)?.message || "Failed to load organizations"}
+              {error?.message || "Failed to load organizations"}
             </Text>
             <Button onClick={() => refetch()}>Retry</Button>
           </Stack>
-        ) : rows.length === 0 ? (
+        ) : null}
+        {!isLoading && !isError && rows.length === 0 ? (
           <Stack align="center" justify="center" py={16} gap={5} textAlign="center" w="full">
             <Box
               bg={cardBg}

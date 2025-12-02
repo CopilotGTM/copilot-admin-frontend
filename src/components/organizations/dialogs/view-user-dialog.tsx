@@ -3,14 +3,14 @@
 import React from "react";
 import { Button, CloseButton, Dialog, Portal, Text, Box, Separator, Stack, Badge } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import type { UserListItem } from "../../../lib/org-member";
+import type { UserListItem } from "@/modules/users/types";
 
 export interface ViewUserDialogProps {
   trigger: React.ReactNode;
   user: UserListItem;
 }
 
-export default function ViewUserDialog({ trigger, user }: ViewUserDialogProps) {
+export default function ViewUserDialog({ trigger, user }: Readonly<ViewUserDialogProps>) {
   return (
     <Dialog.Root placement="center" scrollBehavior="inside" size={"md"}>
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>

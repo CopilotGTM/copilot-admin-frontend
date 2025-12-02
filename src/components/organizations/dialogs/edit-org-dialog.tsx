@@ -22,10 +22,10 @@ import {
 } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { Plus, Trash2, Globe, Link2, Image as ImageIcon } from "lucide-react";
-import type { OrganizationListItem, UpdateOrganizationRequest, OrganizationDetail } from "../../../lib/organizations";
+import type { OrganizationListItem, UpdateOrganizationRequest, OrganizationDetail } from "@/modules/organizations/types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createOrganizationSchema, type CreateOrganizationInput } from "../../../app/schemas/organizations";
+import { createOrganizationSchema, type CreateOrganizationInput } from "@/modules/organizations/schemas";
 
 export interface EditOrgDialogProps {
   trigger: React.ReactNode;
@@ -36,7 +36,7 @@ export interface EditOrgDialogProps {
   ) => Promise<OrganizationDetail>;
 }
 
-export default function EditOrgDialog({ trigger, org, onUpdate }: EditOrgDialogProps) {
+export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditOrgDialogProps>) {
   const {
     register,
     handleSubmit,

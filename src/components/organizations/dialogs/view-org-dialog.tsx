@@ -18,7 +18,7 @@ import {
 } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { Globe, Link2, Image as ImageIcon } from "lucide-react";
-import type { OrganizationListItem } from "../../../lib/organizations";
+import type { OrganizationListItem } from "@/modules/organizations/types";
 import { format } from "date-fns";
 
 export interface ViewOrgDialogProps {
@@ -37,11 +37,11 @@ const statusColor: Record<OrganizationListItem["status"], string> = {
 function formatDate(value?: string): string {
   if (!value) return "—";
   const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
+  if (Number.isNaN(d.getTime())) return value;
   return format(d, "PPpp");
 }
 
-export default function ViewOrgDialog({ trigger, org }: ViewOrgDialogProps) {
+export default function ViewOrgDialog({ trigger, org }: Readonly<ViewOrgDialogProps>) {
   return (
     <Dialog.Root placement="center" scrollBehavior="inside" size={"xl"} motionPreset="slide-in-bottom">
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>

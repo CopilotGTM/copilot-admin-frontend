@@ -1,29 +1,27 @@
 "use client";
 
 import React from "react";
-import { Box, Flex, Text, HStack, Icon, Button, Image, Stack, Badge, Tabs } from "@chakra-ui/react";
-import PageHeader from "../../../../components/page-header";
+import { Box, Flex, Text, HStack, Icon, Button, Image, Stack, Badge, Tabs, Menu, Portal as ChakraPortal } from "@chakra-ui/react";
+import { PageHeader } from "@/components/layout";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { getOrganization, type OrganizationDetail } from "../../../../lib/organizations";
-import { useColorModeValue } from "../../../../components/ui/color-mode";
-import { Users, Pencil, Plus, History, Settings, CreditCard, Plug, Shield } from "lucide-react";
-import EditOrgDialog from "../../../../components/organizations/dialogs/edit-org-dialog";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { updateOrganization, type UpdateOrganizationRequest, type OrganizationDetail as OrgDetail } from "../../../../lib/organizations";
-import { listUsers, createUser, updateUserDetails, updateUserAdminStatus, type UserListItem } from "../../../../lib/org-member";
-import { CustomTable, type Column } from "../../../../components/ui/custom-table";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getOrganization, updateOrganization } from "@/modules/organizations/api";
+import type { OrganizationDetail, UpdateOrganizationRequest } from "@/modules/organizations/types";
+import { listUsers, createUser, updateUserDetails, updateUserAdminStatus } from "@/modules/users/api";
+import type { UserListItem } from "@/modules/users/types";
+import { useColorModeValue } from "@/components/ui/color-mode";
+import { Users, Pencil, Plus, History, Settings, CreditCard, Plug, Shield, Eye, Trash2 as TrashIcon, MoreVertical } from "lucide-react";
+import EditOrgDialog from "@/components/organizations/dialogs/edit-org-dialog";
+import { CustomTable, type Column } from "@/components/ui/custom-table";
 import { format } from "date-fns";
-import CreateUserDialog from "../../../../components/organizations/dialogs/create-user-dialog";
-import ViewUserDialog from "../../../../components/organizations/dialogs/view-user-dialog";
-import EditUserDialog from "../../../../components/organizations/dialogs/edit-user-dialog";
-import AlertDialog from "../../../../components/ui/alert-dialog";
-import { Eye, Pencil as PencilIcon, Trash2 as TrashIcon, MoreVertical } from "lucide-react";
-import { Menu, Portal as ChakraPortal } from "@chakra-ui/react";
+import CreateUserDialog from "@/components/organizations/dialogs/create-user-dialog";
+import ViewUserDialog from "@/components/organizations/dialogs/view-user-dialog";
+import EditUserDialog from "@/components/organizations/dialogs/edit-user-dialog";
+import AlertDialog from "@/components/ui/alert-dialog";
 
 export default function OrganizationDetailsPage() {
   const params = useParams<{ id: string }>();
-  const id = params?.id as string;
+  const id = params?.id ?? "";
 
   const { data, isLoading, isError, error } = useQuery<OrganizationDetail, Error>({
     queryKey: ["organization", id],
@@ -32,7 +30,7 @@ export default function OrganizationDetailsPage() {
   });
 
   const queryClient = useQueryClient();
-  const updateOrgMutation = useMutation<OrgDetail, Error, { id: string; payload: UpdateOrganizationRequest }>({
+  const updateOrgMutation = useMutation<OrganizationDetail, Error, { id: string; payload: UpdateOrganizationRequest }>({
     mutationFn: ({ id, payload }) => updateOrganization(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organization", id] });
@@ -40,9 +38,6 @@ export default function OrganizationDetailsPage() {
     },
   });
 
-  // const [editOpen, setEditOpen] = React.useState(false);
-
-  // const muted = useColorModeValue("gray.600", "gray.400");
   const cardBorder = useColorModeValue("gray.200", "gray.700");
   const logoBackground = useColorModeValue("white", "gray.800");
 
@@ -85,11 +80,11 @@ export default function OrganizationDetailsPage() {
       />
 
       <Flex direction="column" gap={6} px={10} mt={6}>
-        {isLoading ? (
-          <Text>Loading…</Text>
-        ) : isError ? (
+        {isLoading ? <Text>Loading…</Text> : null}
+        {!isLoading && isError ? (
           <Text color="red.500">{error.message || "Failed to load"}</Text>
-        ) : data ? (
+        ) : null}
+        {!isLoading && !isError && data ? (
           <>
             {/* Tabs */}
             <Tabs.Root variant="enclosed" defaultValue={"users"}>
@@ -177,13 +172,15 @@ export default function OrganizationDetailsPage() {
           </>
         ) : null}
       </Flex>
-
-      {/* Edit dialog injected via header actions */}
     </Box>
   );
 }
 
-function UsersSection({ organisationId }: { organisationId: string }) {
+interface UsersSectionProps {
+  readonly organisationId: string;
+}
+
+function UsersSection({ organisationId }: UsersSectionProps) {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["users", { organisationId, limit: 50 }],
@@ -214,7 +211,7 @@ function UsersSection({ organisationId }: { organisationId: string }) {
               await updateUserDetails(user_id, payload);
               queryClient.invalidateQueries({ queryKey: ["users"] });
             }}
-            trigger={<Button variant="ghost" title="Edit"><Icon as={PencilIcon} /></Button>}
+            trigger={<Button variant="ghost" title="Edit"><Icon as={Pencil} /></Button>}
           />
           <AlertDialog
             trigger={<Button variant="ghost" title="Delete"><Icon as={TrashIcon} /></Button>}
@@ -265,13 +262,13 @@ function UsersSection({ organisationId }: { organisationId: string }) {
           }
         />
       </HStack>
-      {isLoading ? (
-        <Text>Loading users…</Text>
-      ) : isError ? (
-        <Text color="red.500">{(error as Error)?.message || "Failed to load users"}</Text>
-      ) : (
+      {isLoading ? <Text>Loading users…</Text> : null}
+      {!isLoading && isError ? (
+        <Text color="red.500">{error?.message || "Failed to load users"}</Text>
+      ) : null}
+      {!isLoading && !isError ? (
         <CustomTable data={rows} columns={columns} pageSize={10} />
-      )}
+      ) : null}
     </Stack>
   );
 }

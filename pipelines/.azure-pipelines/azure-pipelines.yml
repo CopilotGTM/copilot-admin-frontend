@@ -20,24 +20,7 @@ variables:
     value: '$(Build.BuildId)'
   - name: vmImageName
     value: 'ubuntu-latest'
-
-  - ${{ if endsWith(variables['Build.DefinitionName'], '-prod') }}:
-    - group: app-secrets-prod
-    - name: DEPLOY_ENVIRONMENT
-      value: production
-    - name: ACR_LOGIN_SERVER
-      value: copilotgtmacrprod.azurecr.io
-    - name: ACR_SERVICE_CONNECTION
-      value: copilotgtm-acr-connection-prod
-
-  - ${{ else }}:
-    - group: app-secrets-dev
-    - name: DEPLOY_ENVIRONMENT
-      value: dev
-    - name: ACR_LOGIN_SERVER
-      value: copilotgtmacrdev.azurecr.io
-    - name: ACR_SERVICE_CONNECTION
-      value: copilotgtm-acr-connection-dev
+  
 
 stages:
 - stage: BuildAndPush
@@ -56,6 +39,7 @@ stages:
           echo "ACR_LOGIN_SERVER=$(ACR_LOGIN_SERVER)"
           echo "ACR_SERVICE_CONNECTION=$(ACR_SERVICE_CONNECTION)"
         displayName: 'Echo Build Variables'
+      
       - task: Docker@2
         displayName: 'Build and push image to ACR'
         inputs:
@@ -65,6 +49,7 @@ stages:
           dockerfile: '**/Dockerfile'
           tags: |
             $(tag)
+            latest
 
 - stage: Deploy
   displayName: 'Deploy to Azure App Service'
@@ -89,10 +74,31 @@ stages:
               echo "RESOURCE_GROUP=$(RESOURCE_GROUP)"
               echo "Image tag=$(tag)"
             displayName: 'Echo Deploy Variables'
+          
+          # Method 1: Using AzureWebAppContainer task (keeps your existing approach)
           - task: AzureWebAppContainer@1
-            displayName: 'Deploy to Azure App Service'
+            displayName: 'Deploy to Azure App Service via Container Task'
             inputs:
               azureSubscription: $(AZURE_SUBSCRIPTION)
               appName: $(WEB_APP_NAME)
               resourceGroupName: $(RESOURCE_GROUP)
               containers: '$(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)'
+          
+          # Method 2: Alternative using Azure CLI (more flexible)
+          # Uncomment if you prefer this approach over the container task above
+          # - task: AzureCLI@2
+          #   displayName: 'Update App Service Container Image via CLI'
+          #   inputs:
+          #     azureSubscription: $(AZURE_SUBSCRIPTION)
+          #     scriptType: 'bash'
+          #     scriptLocation: 'inlineScript'
+          #     inlineScript: |
+          #       echo "Updating App Service $(WEB_APP_NAME) with image: $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+          #       az webapp config container set \
+          #         --name $(WEB_APP_NAME) \
+          #         --resource-group $(RESOURCE_GROUP) \
+          #         --docker-custom-image-name $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag) \
+          #         --docker-registry-server-url https://$(ACR_LOGIN_SERVER)
+          #       
+          #       echo "Restarting App Service to apply changes..."
+          #       az webapp restart --name $(WEB_APP_NAME) --resource-group $(RESOURCE_GROUP)

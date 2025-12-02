@@ -3,13 +3,13 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Spinner, Center } from "@chakra-ui/react";
-import useAuthStore from "../app/stores/use-auth-store";
+import { useAuthStore } from "@/modules/auth/store";
 
 interface AuthGuardProps {
   children: ReactNode;
 }
 
-export default function AuthProvider({ children }: AuthGuardProps) {
+export default function AuthProvider({ children }: Readonly<AuthGuardProps>) {
   const { isAuthenticated } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();

@@ -1,4 +1,4 @@
-import ForgotPasswordCard from "../../../components/auth/forgot-password-card";
+import { ForgotPasswordCard } from "@/modules/auth/components";
 
 export default function ForgetPassword() {
   return <ForgotPasswordCard />;
