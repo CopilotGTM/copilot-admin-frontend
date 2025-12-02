@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { Box, Flex, Text, Button, Stack, Icon, Skeleton, HStack, Badge, IconButton, Menu, Portal, Dialog } from "@chakra-ui/react";
+import React, { useMemo } from "react";
+import { Box, Flex, Text, Button, Stack, Icon, Skeleton, HStack, Badge, IconButton, Menu, Portal } from "@chakra-ui/react";
 import { PageHeader } from "@/components/layout";
 import { Column, CustomTable } from "@/components/ui/custom-table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +36,8 @@ const statusColor: Record<OrgRow["status"], string> = {
   rejected: "red",
   suspended: "orange",
   deactivated: "gray",
+  provisioning: "blue",
+  failed: "red",
 };
 
 export default function OrganizationsPage() {
@@ -79,11 +81,9 @@ export default function OrganizationsPage() {
   });
 
   const rows: OrgRow[] = useMemo(
-    () => ((data?.organizations || []) as OrganizationListItem[]).map((o) => ({ ...o, id: o.organisation_id })),
+    () => (data?.organizations || []).map((o) => ({ ...o, id: o.organisation_id })),
     [data],
   );
-
-  const [viewOrg, setViewOrg] = useState<OrgRow | null>(null);
 
   const columns: Column<OrgRow>[] = [
     {
@@ -293,36 +293,6 @@ export default function OrganizationsPage() {
           <CustomTable data={rows} columns={columns} pageSize={10} />
         )}
       </Flex>
-
-      {/* View Details Dialog */}
-      <Dialog.Root open={!!viewOrg} onOpenChange={() => setViewOrg(null)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content p={6} rounded="lg">
-              <Dialog.Header>
-                <Dialog.Title>Organization details</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                {viewOrg && (
-                  <Stack gap={2}>
-                    <Text><b>Name:</b> {viewOrg.organisation_name}</Text>
-                    <Text><b>Status:</b> {viewOrg.status}</Text>
-                    <Text><b>Country:</b> {viewOrg.country}</Text>
-                    <Text><b>Team size:</b> {viewOrg.sales_team_size}</Text>
-                    <Text><b>Created:</b> {viewOrg.created_at}</Text>
-                  </Stack>
-                )}
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Dialog.CloseTrigger asChild>
-                  <Button>Close</Button>
-                </Dialog.CloseTrigger>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
 
       {/* Delete Confirmation handled via reusable AlertDialog per-row */}
     </Box>

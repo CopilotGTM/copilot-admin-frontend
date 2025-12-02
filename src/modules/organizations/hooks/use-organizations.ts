@@ -6,6 +6,8 @@ import {
   updateOrganization,
   updateOrganizationStatus,
   deleteOrganization,
+  getAllOrganisationsHistory,
+  getOrganisationHistory,
 } from "../api/organizations.api";
 import type {
   CreateOrganizationRequest,
@@ -21,6 +23,11 @@ export const organizationKeys = {
     [...organizationKeys.lists(), params] as const,
   details: () => [...organizationKeys.all, "detail"] as const,
   detail: (id: string) => [...organizationKeys.details(), id] as const,
+  histories: () => [...organizationKeys.all, "history"] as const,
+  allHistory: (params?: { limit?: number; cursor?: string }) =>
+    [...organizationKeys.histories(), "all", params] as const,
+  history: (id: string, params?: { limit?: number; cursor?: string }) =>
+    [...organizationKeys.histories(), id, params] as const,
 };
 
 // List organizations
@@ -89,5 +96,25 @@ export function useDeleteOrganization() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: organizationKeys.lists() });
     },
+  });
+}
+
+// All organisations history (super_admin only)
+export function useAllOrganisationsHistory(params?: { limit?: number; cursor?: string }) {
+  return useQuery({
+    queryKey: organizationKeys.allHistory(params),
+    queryFn: () => getAllOrganisationsHistory(params),
+  });
+}
+
+// Single organisation history
+export function useOrganisationHistory(
+  organisationId: string,
+  params?: { limit?: number; cursor?: string },
+) {
+  return useQuery({
+    queryKey: organizationKeys.history(organisationId, params),
+    queryFn: () => getOrganisationHistory(organisationId, params),
+    enabled: !!organisationId,
   });
 }

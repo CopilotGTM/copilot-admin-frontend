@@ -48,7 +48,6 @@ export function CreateOrgDialog({ trigger, onCreate }: Readonly<CreateOrgDialogP
       country: "",
       sales_team_size: 0,
       company_address: "",
-      billing_address: "",
       linked_urls: [],
       website_urls: [],
       summary: "",
@@ -97,7 +96,6 @@ export function CreateOrgDialog({ trigger, onCreate }: Readonly<CreateOrgDialogP
       country: data.country,
       sales_team_size: Number(data.sales_team_size ?? 0),
       company_address: data.company_address,
-      billing_address: data.billing_address,
       linked_urls: data.linked_urls ?? [],
       website_urls: data.website_urls ?? [],
       summary: data.summary,
@@ -166,14 +164,6 @@ export function CreateOrgDialog({ trigger, onCreate }: Readonly<CreateOrgDialogP
                     <Input rounded="md" placeholder="123 Test Street, Test City" {...register("company_address")} />
                     {errors.company_address && (
                       <Text color="red.500" fontSize="xs">{errors.company_address.message}</Text>
-                    )}
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel>Billing address</FormLabel>
-                    <Input rounded="md" placeholder="123 Test Street, Test City" {...register("billing_address")} />
-                    {errors.billing_address && (
-                      <Text color="red.500" fontSize="xs">{errors.billing_address.message}</Text>
                     )}
                   </FormControl>
 

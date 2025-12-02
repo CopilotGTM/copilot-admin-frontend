@@ -8,6 +8,8 @@ import type {
   UpdateOrganizationRequest,
   UpdateOrganizationStatusRequest,
   DeleteOrganizationResponse,
+  OrganisationHistoryResponse,
+  UpdateStatusResponse,
 } from "../types/organization.types";
 
 const BASE = "/organisations" as const;
@@ -68,8 +70,8 @@ export async function updateOrganization(
 export async function updateOrganizationStatus(
   organisation_id: string,
   payload: UpdateOrganizationStatusRequest,
-): Promise<OrganizationDetail> {
-  const res = await axiosInstance.put<ApiResponse<OrganizationDetail>>(
+): Promise<UpdateStatusResponse> {
+  const res = await axiosInstance.put<ApiResponse<UpdateStatusResponse>>(
     `${BASE}/${organisation_id}/status`,
     payload,
   );
@@ -87,6 +89,35 @@ export async function deleteOrganization(
   );
   if (res.data.status !== "SUCCESS" || !res.data.data) {
     throw new Error(res.data.message || "Failed to delete organization");
+  }
+  return res.data.data;
+}
+
+// History endpoints
+export async function getAllOrganisationsHistory(params: {
+  limit?: number;
+  cursor?: string;
+} = {}): Promise<OrganisationHistoryResponse> {
+  const res = await axiosInstance.get<ApiResponse<OrganisationHistoryResponse>>(
+    `${BASE}/all_organisations_history`,
+    { params },
+  );
+  if (res.data.status !== "SUCCESS" || !res.data.data) {
+    throw new Error(res.data.message || "Failed to fetch history");
+  }
+  return res.data.data;
+}
+
+export async function getOrganisationHistory(
+  organisation_id: string,
+  params: { limit?: number; cursor?: string } = {},
+): Promise<OrganisationHistoryResponse> {
+  const res = await axiosInstance.get<ApiResponse<OrganisationHistoryResponse>>(
+    `${BASE}/${organisation_id}/history`,
+    { params },
+  );
+  if (res.data.status !== "SUCCESS" || !res.data.data) {
+    throw new Error(res.data.message || "Failed to fetch organization history");
   }
   return res.data.data;
 }

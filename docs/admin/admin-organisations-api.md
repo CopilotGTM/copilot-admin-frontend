@@ -68,6 +68,7 @@ POST /create_organisation
 ```
 
 Notes:
+
 - Provisioning runs synchronously (schema, migrations, storage) before returning.
 - Initial status transitions to `pending` after provisioning.
 

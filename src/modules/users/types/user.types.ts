@@ -1,8 +1,8 @@
 // User types
 
 export type UserAppRole = "member" | "admin";
-export type SupabaseUserStatus = "active" | "inactive" | "pending_setup";
-export type AdminUserStatus = "pending" | "approved" | "rejected" | "suspended";
+export type SupabaseUserStatus = "ACTIVE" | "INACTIVE" | "PASSWORD_CHANGE_REQUIRED";
+export type AdminUserStatus = "pending" | "approved" | "rejected" | "suspended" | "deactivated";
 export type UserEventType =
   | "created"
   | "updated"
@@ -41,7 +41,7 @@ export interface CreateUserRequest {
   email: string;
   organisation_id: string;
   user_role: UserAppRole;
-  job_title: string;
+  job_title?: string;
   organisation_role: string;
 }
 

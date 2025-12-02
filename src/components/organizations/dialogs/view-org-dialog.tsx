@@ -32,6 +32,8 @@ const statusColor: Record<OrganizationListItem["status"], string> = {
   rejected: "red",
   suspended: "orange",
   deactivated: "gray",
+  provisioning: "blue",
+  failed: "red",
 };
 
 function formatDate(value?: string): string {
@@ -100,10 +102,6 @@ export default function ViewOrgDialog({ trigger, org }: Readonly<ViewOrgDialogPr
                 <FormControl>
                   <FormLabel>Company address</FormLabel>
                   <Text fontWeight="semibold">{org.company_address}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Billing address</FormLabel>
-                  <Text fontWeight="semibold">{org.billing_address}</Text>
                 </FormControl>
 
                 <Box gridColumn={{ base: "auto", md: "1 / -1" }}>

@@ -52,7 +52,6 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
       country: org.country ?? "",
       sales_team_size: org.sales_team_size ?? 0,
       company_address: org.company_address ?? "",
-      billing_address: org.billing_address ?? "",
       linked_urls: org.linked_urls ?? [],
       website_urls: org.website_urls ?? [],
       summary: org.summary ?? "",
@@ -65,7 +64,6 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
     country: org.country ?? "",
     sales_team_size: org.sales_team_size ?? 0,
     company_address: org.company_address ?? "",
-    billing_address: org.billing_address ?? "",
     linked_urls: org.linked_urls ?? [],
     website_urls: org.website_urls ?? [],
     summary: org.summary ?? "",
@@ -137,7 +135,6 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
       country: res.country ?? data.country,
       sales_team_size: res.sales_team_size ?? data.sales_team_size,
       company_address: res.company_address ?? data.company_address,
-      billing_address: (res as any).billing_address ?? data.billing_address,
       linked_urls: res.linked_urls ?? data.linked_urls,
       website_urls: res.website_urls ?? data.website_urls,
       summary: res.summary ?? data.summary,
@@ -205,14 +202,6 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
                     <Input rounded="md" placeholder="123 Test Street, Test City" {...register("company_address")} />
                     {errors.company_address && (
                       <Text color="red.500" fontSize="xs">{errors.company_address.message}</Text>
-                    )}
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel>Billing address</FormLabel>
-                    <Input rounded="md" placeholder="123 Test Street, Test City" {...register("billing_address")} />
-                    {errors.billing_address && (
-                      <Text color="red.500" fontSize="xs">{errors.billing_address.message}</Text>
                     )}
                   </FormControl>
 

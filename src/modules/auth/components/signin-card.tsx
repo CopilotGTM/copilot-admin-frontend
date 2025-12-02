@@ -21,7 +21,7 @@ import {
 } from "@chakra-ui/react";
 import { LogIn, User } from "lucide-react";
 import PasswordInput from "@/components/password-input";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { loginSchema, type LoginInput } from "@/modules/auth/schemas";
 import { useMutation } from "@tanstack/react-query";
 import { loginAdmin } from "@/modules/auth/api";
@@ -39,9 +39,22 @@ import {
 
 export function SigninCard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setAuth } = useAuthStore();
-  const rememberedEmailInitial = globalThis.window === undefined ? "" : getRememberedEmail();
-  const [rememberMe, setRememberMe] = useState(!!rememberedEmailInitial);
+  const [emailValue, setEmailValue] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Load remembered email on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+    const email = getRememberedEmail();
+    if (email) {
+      setEmailValue(email);
+      setRememberMe(true);
+      setValue("email", email);
+    }
+  }, []);
 
   const {
     register: signin,
@@ -51,31 +64,30 @@ export function SigninCard() {
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     mode: "onChange",
-    defaultValues: { email: rememberedEmailInitial, password: "" },
+    defaultValues: { email: "", password: "" },
   });
-
-  useEffect(() => {
-    if (rememberedEmailInitial) {
-      setValue("email", rememberedEmailInitial);
-    }
-  }, [rememberedEmailInitial, setValue]);
 
   const loginMutation = useMutation({
     mutationFn: loginAdmin,
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      console.log("Login response received:", response);
+      // The API returns { status, data, message } - extract the inner data
+      const data = (response as unknown as { status: string; data: typeof response; message: string }).data;
+      
       if (data.state === "ACTIVE" && data.tokens) {
+        console.log("Setting auth with tokens...");
         setAuth(
           data.tokens.access_token,
           data.tokens.refresh_token,
           {
-            email: data.email!,
-            first_name: data.first_name!,
-            last_name: data.last_name!,
-            role: data.role!,
+            email: data.email,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            role: data.role,
             state: data.state,
-            created_at: data.created_at!,
-            email_verified: data.email_verified!,
-            last_login_at: data.last_login_at!,
+            created_at: data.created_at,
+            email_verified: data.email_verified,
+            last_login_at: data.last_login_at,
           } as AdminUser,
           rememberMe
         );
@@ -91,7 +103,14 @@ export function SigninCard() {
           title: "Login successful",
           duration: 2000,
         });
-        router.push("/");
+        
+        // Redirect to callback URL or home page
+        const callbackUrl = searchParams.get("callbackUrl");
+        const redirectTo = callbackUrl ? decodeURI(callbackUrl) : "/";
+        console.log("Redirecting to:", redirectTo);
+        setTimeout(() => {
+          globalThis.location.href = redirectTo;
+        }, 100);
       } else if (data.state === "PASSWORD_CHANGE_REQUIRED" && data.password_reset_link) {
         toaster.create({
           title: "Password change required",
@@ -99,9 +118,18 @@ export function SigninCard() {
           duration: 3000,
         });
         router.push(`${data.password_reset_link}&force_change=true`);
+      } else {
+        console.error("Unexpected login response:", response);
+        toaster.create({
+          title: "Login failed",
+          description: "Unexpected response from server",
+          type: "error",
+          duration: 3000,
+        });
       }
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      console.error("Login error:", error);
       toaster.create({
         title: "Login failed",
         description: "Something went wrong",
@@ -119,8 +147,15 @@ export function SigninCard() {
     }
   };
 
-  const onSubmit = async (data: LoginInput) => {
+  const onSubmit = (data: LoginInput) => {
+    console.log("=== SUBMIT CLICKED ===");
+    console.log("Form data:", data);
     loginMutation.mutate(data);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(onSubmit)();
   };
 
   return (
@@ -144,6 +179,7 @@ export function SigninCard() {
             </Text>
           </Stack>
           
+          <form onSubmit={handleFormSubmit}>
           <Stack gap={5} mt={12}>
             <FormControl display="flex" flexDirection="column" gap={4}>
               <FormLabel fontSize="sm" fontWeight="medium" color="gray.600">
@@ -151,7 +187,7 @@ export function SigninCard() {
               </FormLabel>
               <InputGroup
                 startElement={
-                  <Button disabled variant={"ghost"} w={"48px"} h={"48px"}>
+                  <Button disabled variant={"ghost"} w={"48px"} h={"48px"} type="button">
                     <Icon as={User} color="gray.400" size={"md"} />
                   </Button>
                 }
@@ -175,7 +211,7 @@ export function SigninCard() {
               {errors.email && (
                 <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
               )}
-              {rememberedEmailInitial && (
+              {isClient && emailValue && (
                 <Text fontSize="xs" color="green.500" mt={1}>
                   ✓ Email remembered from previous login
                 </Text>
@@ -236,6 +272,7 @@ export function SigninCard() {
               </Stack>
               
               <Button
+                type="submit"
                 bg={"purple.600"}
                 height={"48px"}
                 borderRadius={"6px"}
@@ -243,7 +280,6 @@ export function SigninCard() {
                 fontWeight={"semibold"}
                 color={"white"}
                 _hover={{ bg: "purple.500" }}
-                onClick={handleSubmit(onSubmit)}
                 loading={isSubmitting || loginMutation.isPending}
                 disabled={!isValid || isSubmitting || loginMutation.isPending}
                 loadingText="Signing in"
@@ -264,6 +300,7 @@ export function SigninCard() {
               </Text>
             )}
           </Stack>
+          </form>
         </Box>
       </Stack>
     </Flex>

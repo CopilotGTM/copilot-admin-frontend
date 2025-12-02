@@ -2,9 +2,9 @@ import axiosInstance from "@/core/api/axios-instance";
 import type { AdminAuthResponse, AdminTokens } from "../types/auth.types";
 
 const AUTH_ENDPOINTS = {
-  login: "/admin/auth/login",
-  refresh: "/admin/auth/refresh",
-  logout: "/admin/auth/logout",
+  login: "/auth/login",
+  refresh: "/auth/refresh",
+  logout: "/auth/logout",
 } as const;
 
 export interface LoginPayload {

@@ -59,11 +59,7 @@ export function ResetPasswordCard({ tokenHash, forceChange }: Readonly<ResetPass
   };
 
   const resetPasswordMutation = useMutation({
-    mutationFn: (data: ResetPasswordInput) => resetPassword({
-      token: data.token_hash,
-      password: data.new_password,
-      confirmPassword: data.confirm_password,
-    }),
+    mutationFn: (data: ResetPasswordInput) => resetPassword(data),
     onSuccess: () => {
       toaster.create({ title: "Password reset successfully!" });
       router.push("/signin");

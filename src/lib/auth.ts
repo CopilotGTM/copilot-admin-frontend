@@ -1,5 +1,5 @@
 import { LoginInput } from "../app/schemas/auth";
-import useAuthStore from "../app/stores/use-auth-store";
+import { useAuthStore } from "@/modules/auth/store";
 import restAxiosInstance from "../core/rest-client/rest-client.axios";
 import { clearRememberedEmail } from "./remember-me";
 
@@ -20,7 +20,7 @@ export interface AdminTokens {
 }
 
 export interface AdminAuthResponse {
-  success: boolean;
+  status: "SUCCESS" | "ERROR";
   message: string;
   data: AdminUser & {
     tokens?: AdminTokens;
@@ -47,19 +47,9 @@ export const refreshAccessToken = async (
 };
 
 export const logout = (): void => {
-  if (typeof window !== "undefined") {
+  if (globalThis.window !== undefined) {
     const { clearAuth } = useAuthStore.getState();
     clearAuth();
     clearRememberedEmail();
   }
 };
-
-// export const getCurrentUser = async (): Promise<User | null> => {
-//   try {
-//     const response = await restAxiosInstance.get<User>("/auth/me");
-//     return response.data;
-//     // eslint-disable-next-line unused-imports/no-unused-vars
-//   } catch (error) {
-//     return null;
-//   }
-// };

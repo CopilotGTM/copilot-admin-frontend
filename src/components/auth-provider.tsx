@@ -18,7 +18,6 @@ export default function AuthProvider({ children }: Readonly<AuthGuardProps>) {
   useEffect(() => {
     // Public routes that don't require authentication
     const publicRoutes = [
-      "/",
       "/signin",
       "/forgot-password",
       "/reset-password",

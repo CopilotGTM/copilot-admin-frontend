@@ -11,7 +11,7 @@ export const createUserSchema = z.object({
   email: z.string().email("Enter a valid email"),
   organisation_id: z.string().uuid("Invalid organization id"),
   user_role: userRoleEnum,
-  job_title: z.string().min(1, "Job title is required"),
+  job_title: z.string().optional(),
   organisation_role: z.string().min(1, "Organization role is required"),
 });
 

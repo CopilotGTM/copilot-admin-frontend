@@ -123,8 +123,8 @@ export default function CreateUserDialog({ trigger, organisationId, onCreate }: 
                     {errors.user_role && <Text color="red.500" fontSize="xs">{errors.user_role.message}</Text>}
                   </FormControl>
 
-                  <FormControl isRequired>
-                    <FormLabel>Job title</FormLabel>
+                  <FormControl>
+                    <FormLabel>Job title (optional)</FormLabel>
                     <InputGroup
                       startElement={
                         <Button disabled variant="ghost" w="48px" h="48px">
