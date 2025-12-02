@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import ResetPasswordCard from "../../../components/auth/reset-password-card";
+import { ResetPasswordCard } from "@/modules/auth/components";
 
 export default function ResetPassword() {
   const searchParams = useSearchParams();

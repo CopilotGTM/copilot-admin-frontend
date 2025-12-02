@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { User as UserIcon, Briefcase, IdCard } from "lucide-react";
-import type { UserListItem, UpdateUserDetailsRequest } from "../../../lib/org-member";
+import type { UserListItem, UpdateUserDetailsRequest } from "@/modules/users/types";
 
 const editUserSchema = z.object({
   first_name: z.string().min(1),
@@ -24,7 +24,7 @@ export interface EditUserDialogProps {
   onUpdate: (user_id: string, payload: UpdateUserDetailsRequest) => Promise<void>;
 }
 
-export default function EditUserDialog({ trigger, user, onUpdate }: EditUserDialogProps) {
+export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<EditUserDialogProps>) {
   const {
     register,
     handleSubmit,

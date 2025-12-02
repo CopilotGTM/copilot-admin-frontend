@@ -20,7 +20,9 @@
     "incremental": true,
     "customConditions": ["source"],
     "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
       "@chakra-ui/react": ["../../packages/react/src"]
     }
   },

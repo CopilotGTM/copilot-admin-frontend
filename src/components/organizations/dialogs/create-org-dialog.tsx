@@ -22,17 +22,17 @@ import {
 } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { Plus, Trash2, Globe, Link2, Image as ImageIcon } from "lucide-react";
-import type { CreateOrganizationRequest, OrganizationSummary } from "../../../lib/organizations";
+import type { CreateOrganizationRequest, OrganizationSummary } from "@/modules/organizations/types";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createOrganizationSchema, type CreateOrganizationInput } from "../../../app/schemas/organizations";
+import { createOrganizationSchema, type CreateOrganizationInput } from "@/modules/organizations/schemas";
 
 export interface CreateOrgDialogProps {
   trigger: React.ReactNode;
   onCreate: (payload: CreateOrganizationRequest) => Promise<OrganizationSummary>;
 }
 
-export function CreateOrgDialog({ trigger, onCreate }: CreateOrgDialogProps) {
+export function CreateOrgDialog({ trigger, onCreate }: Readonly<CreateOrgDialogProps>) {
   const {
     register,
     handleSubmit,
