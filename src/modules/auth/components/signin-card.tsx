@@ -45,17 +45,6 @@ export function SigninCard() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // Load remembered email on client side only to avoid hydration mismatch
-  useEffect(() => {
-    setIsClient(true);
-    const email = getRememberedEmail();
-    if (email) {
-      setEmailValue(email);
-      setRememberMe(true);
-      setValue("email", email);
-    }
-  }, []);
-
   const {
     register: signin,
     handleSubmit,
@@ -66,6 +55,17 @@ export function SigninCard() {
     mode: "onChange",
     defaultValues: { email: "", password: "" },
   });
+
+  // Load remembered email on client side only to avoid hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+    const email = getRememberedEmail();
+    if (email) {
+      setEmailValue(email);
+      setRememberMe(true);
+      setValue("email", email);
+    }
+  }, [setValue]);
 
   const loginMutation = useMutation({
     mutationFn: loginAdmin,

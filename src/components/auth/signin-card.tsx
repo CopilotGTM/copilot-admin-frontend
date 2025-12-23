@@ -44,17 +44,6 @@ export default function SigninCard() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
-  // Load remembered email only on client side to avoid hydration mismatch
-  useEffect(() => {
-    setIsClient(true);
-    const email = getRememberedEmail();
-    if (email) {
-      setEmailValue(email);
-      setRememberMe(true);
-      setValue("email", email);
-    }
-  }, []);
-
   const {
     register: signin,
     handleSubmit,
@@ -65,6 +54,27 @@ export default function SigninCard() {
     mode: "onChange",
     defaultValues: { email: "", password: "" },
   });
+
+  // Load remembered email only on client side to avoid hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+    const email = getRememberedEmail();
+    if (email) {
+      setEmailValue(email);
+      setRememberMe(true);
+      setValue("email", email);
+    }
+  }, [setValue]);
+
+  const getErrorMessage = (error: unknown): string | undefined => {
+    if (typeof error !== "object" || error === null) return undefined;
+    const maybeResponse = (error as { response?: unknown }).response;
+    if (typeof maybeResponse !== "object" || maybeResponse === null) return undefined;
+    const maybeData = (maybeResponse as { data?: unknown }).data;
+    if (typeof maybeData !== "object" || maybeData === null) return undefined;
+    const maybeMessage = (maybeData as { message?: unknown }).message;
+    return typeof maybeMessage === "string" ? maybeMessage : undefined;
+  };
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -125,11 +135,11 @@ export default function SigninCard() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error("Login error:", error);
       toaster.create({
         title: "Login failed",
-        description: error?.response?.data?.message || "Something went wrong",
+        description: getErrorMessage(error) || "Something went wrong",
         type: "error",
         duration: 2000,
       });

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Providers from "./providers";
 import AuthProvider from "../components/auth-provider";
@@ -27,7 +28,9 @@ export default function RootLayout({
       <head />
       <body>
         <Providers>
-          <AuthProvider>{children}</AuthProvider>
+          <Suspense fallback={null}>
+            <AuthProvider>{children}</AuthProvider>
+          </Suspense>
           <Toaster />
         </Providers>
       </body>
