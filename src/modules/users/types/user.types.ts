@@ -22,6 +22,7 @@ export interface UserProfile {
   organisation_id: string;
   organisation_role: string;
   job_title: string;
+  user_role: UserAppRole;
   status: SupabaseUserStatus;
   admin_status: AdminUserStatus;
   created_at: string;
@@ -79,10 +80,12 @@ export interface UserHistoryItem {
   id: string;
   user_id: string;
   action: UserEventType;
-  note: string;
-  details: Record<string, unknown>;
+  note: string | null;
+  details: Record<string, unknown> | null;
   created_at: string;
-  actor_admin_id: string;
+  actor_admin_id: string | null;
+  actor_admin_name?: string | null;
+  actor_admin_email?: string | null;
 }
 
 export interface ListUserHistoryResponse {

@@ -110,11 +110,15 @@ export type OrganisationEventType =
 export interface OrganisationHistoryItem {
   id: string;
   organisation_id: string;
+  organisation_name?: string;
+  organisation_status?: OrganizationStatus;
   action: OrganisationEventType;
   note: string | null;
   details: Record<string, unknown> | null;
   created_at: string;
   actor_admin_id: string | null;
+  actor_admin_name?: string | null;
+  actor_admin_email?: string | null;
 }
 
 export interface OrganisationHistoryResponse {

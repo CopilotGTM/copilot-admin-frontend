@@ -689,6 +689,11 @@ export default function OrganizationsPage() {
                         <Text fontSize="sm" mt={2} color={h.note ? "inherit" : muted}>
                           {h.note || "—"}
                         </Text>
+                        {h.actor_admin_name ? (
+                          <Text fontSize="xs" color={muted} mt={1}>
+                            by {h.actor_admin_name}
+                          </Text>
+                        ) : null}
                       </Box>
                     ))}
                   </Stack>

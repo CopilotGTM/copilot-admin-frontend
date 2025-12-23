@@ -445,6 +445,8 @@ PUT /{organisation_id}/status
 GET /all_organisations_history?limit=20&cursor=<opaque>
 ```
 
+Note: `limit` is capped at `20` (even if a higher value is provided).
+
 #### Role — All Organisations History
 
 `super_admin`
@@ -457,11 +459,15 @@ GET /all_organisations_history?limit=20&cursor=<opaque>
     {
       "id": "uuid",
       "organisation_id": "uuid",
+      "organisation_name": "Acme Inc",
+      "organisation_status": "approved",
       "action": "created",
       "note": "Organization provisioned and ready for approval.",
       "details": { "metrics": { "migrations": 1.2 } },
       "created_at": "2025-11-20T10:00:00Z",
-      "actor_admin_id": "admin-uuid"
+      "actor_admin_id": "admin-uuid",
+      "actor_admin_name": "Jane Doe",
+      "actor_admin_email": "admin@company.com"
     }
   ],
   "cursor": "eyJjcmVhdGVkX2F0Ijoi..."
