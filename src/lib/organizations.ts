@@ -115,18 +115,6 @@ export async function updateOrganization(
   return res.data.data;
 }
 
-export async function deleteOrganization(
-  organisation_id: string,
-): Promise<DeleteOrganizationResponse> {
-  const res = await restAxiosInstance.delete<ApiResponse<DeleteOrganizationResponse>>(
-    `${BASE}/${organisation_id}/delete`,
-  );
-  if (res.data.status !== "SUCCESS" || !res.data.data) {
-    throw new Error(res.data.message || "Failed to delete organization");
-  }
-  return res.data.data;
-}
-
 // --- Update Organization Status ---
 export type UpdatableOrgStatus = "approved" | "rejected" | "suspended";
 

@@ -19,6 +19,11 @@ Admin-facing user management: create users, update roles/status, and review hist
   - `super_admin` only: update admin status.
   - `super_admin` or `admin`: create, list, fetch profile, update user details, and view history.
 
+## Rate Limits
+
+- These endpoints are not explicitly rate-limited at the handler level today.
+- If rate limiting is enabled at gateway/proxy level, expect `429 Too Many Requests`.
+
 ## Key Enums
 
 | Enum | Values |

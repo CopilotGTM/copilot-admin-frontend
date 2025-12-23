@@ -162,12 +162,13 @@ export function SigninCard() {
     <Flex minH={"100vh"} align={"center"} justify={"center"} bg={"white"}>
       <Stack gap={8} mx={"auto"} maxW={"lg"} py={12} px={6}>
         <Box
-          w={"md"}
+          w={"full"}
+          maxW={"md"}
           rounded={"xl"}
           bg={"white"}
           boxShadow={"md"}
           blur={"md"}
-          p={8}
+          p={10}
         >
           <Stack align={"center"}>
             <Image src="./logo.svg" alt="Copilot-GTM logo" />
@@ -198,6 +199,7 @@ export function SigninCard() {
                   type="email"
                   borderRadius={6}
                   height={"48px"}
+                  ps={"56px"}
                   pr={"16px"}
                   placeholder="Enter your username"
                   _placeholder={{

@@ -7,7 +7,9 @@ export const urlString = z
 
 export const createOrganizationSchema = z.object({
   organisation_name: z.string().min(1, "Organization name is required"),
-  country: z.string().optional(),
+  agent_name: z.string().optional(),
+  domain: z.array(z.string().min(1, "Enter a valid domain")).optional().default([]),
+  country: z.string().min(1, "Country is required"),
   sales_team_size: z
     .number({ invalid_type_error: "Enter a valid number" })
     .int({ message: "Must be an integer" })

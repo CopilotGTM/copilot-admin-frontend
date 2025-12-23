@@ -49,7 +49,7 @@ restAxiosInstance.interceptors.response.use(
 
     // Avoid on auth endpoints
     const url = originalRequest.url || "";
-    const isAuthEndpoint = /\/auth\/(login|refresh|reset-password|forget-password)/.test(url);
+    const isAuthEndpoint = /\/auth\/(login|refresh-token|refresh|forgot-password|reset-password|logout)/.test(url);
     if (isAuthEndpoint) {
       throw error;
     }

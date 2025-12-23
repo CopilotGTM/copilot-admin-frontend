@@ -137,7 +137,7 @@ POST /reset-password
 |-------|------|----------|-------------|
 | `token_hash` | string | Yes | Supabase recovery token hash |
 | `new_password` | string | Yes | New password to set |
-| `confirm_password` | string | No | Must match `new_password` when provided |
+| `confirm_password` | string | Yes | Must match `new_password` |
 | `action` | `"forgot"` \| `"force_change"` | No (default: `"forgot"`) | Use `force_change` for first-time setup to clear the pending setup flag |
 
 **Success**

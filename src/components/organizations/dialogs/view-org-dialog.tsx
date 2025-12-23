@@ -86,9 +86,30 @@ export default function ViewOrgDialog({ trigger, org }: Readonly<ViewOrgDialogPr
                   <Text fontWeight="semibold">{org.organisation_name}</Text>
                 </FormControl>
                 <FormControl>
+                  <FormLabel>Agent name</FormLabel>
+                  <Text fontWeight="semibold">{org.agent_name || "—"}</Text>
+                </FormControl>
+                <FormControl>
                   <FormLabel>Country</FormLabel>
                   <Text fontWeight="semibold">{org.country}</Text>
                 </FormControl>
+
+                <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
+                  <FormControl>
+                    <FormLabel>Domains</FormLabel>
+                    {org.domain && org.domain.length > 0 ? (
+                      <HStack gap={2} flexWrap="wrap">
+                        {org.domain.map((d, idx) => (
+                          <Badge key={`${d}-${idx}`} variant="subtle" colorPalette="blue" px={2} py={1} rounded="md">
+                            {d}
+                          </Badge>
+                        ))}
+                      </HStack>
+                    ) : (
+                      <Text color="gray.500">—</Text>
+                    )}
+                  </FormControl>
+                </Box>
 
                 <FormControl>
                   <FormLabel>Sales team size</FormLabel>

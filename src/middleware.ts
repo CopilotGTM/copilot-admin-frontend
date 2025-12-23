@@ -39,6 +39,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public files (files with extensions like .png, .svg, .css, .js, etc.)
      */
-    String.raw`/((?!api|_next/static|_next/image|favicon.ico|.*\.[\w]+$).*)`,
+    "/((?!api|_next|favicon.ico|.*\\..*).*)",
   ],
 };

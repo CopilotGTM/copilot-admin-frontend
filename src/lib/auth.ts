@@ -2,6 +2,7 @@ import { LoginInput } from "../app/schemas/auth";
 import { useAuthStore } from "@/modules/auth/store";
 import restAxiosInstance from "../core/rest-client/rest-client.axios";
 import { clearRememberedEmail } from "./remember-me";
+import type { ApiResponse } from "@/types/api.types";
 
 export interface AdminUser {
   email: string;
@@ -39,10 +40,15 @@ export const login = async (data: LoginInput): Promise<AdminAuthResponse> => {
 export const refreshAccessToken = async (
   refresh_token: string,
 ): Promise<AdminTokens> => {
-  const response = await restAxiosInstance.post<{ data: AdminTokens }>(
-    "/auth/access_token",
+  const response = await restAxiosInstance.post<ApiResponse<AdminTokens>>(
+    "/auth/refresh-token",
     { refresh_token },
   );
+
+  if (response.data.status !== "SUCCESS" || !response.data.data) {
+    throw new Error(response.data.message || "Failed to refresh token");
+  }
+
   return response.data.data;
 };
 

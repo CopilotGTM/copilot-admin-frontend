@@ -20,6 +20,8 @@ export interface OrganizationSummary {
 export interface OrganizationListItem {
   organisation_id: string;
   organisation_name: string;
+  agent_name?: string;
+  domain?: string[];
   is_active: boolean;
   country: string;
   sales_team_size: number;
@@ -31,6 +33,8 @@ export interface OrganizationListItem {
   status: OrganizationStatus;
   created_at: string;
   updated_at: string;
+  /** Active provisioning job, if any (present for status=provisioning) */
+  active_job?: ActiveJob;
 }
 
 export type OrganizationDetail = OrganizationListItem;
@@ -42,6 +46,8 @@ export interface ListOrganizationsResponse {
 
 export interface CreateOrganizationRequest {
   organisation_name: string;
+  agent_name?: string;
+  domain?: string[];
   country?: string;
   sales_team_size?: number;
   company_address?: string;
@@ -53,6 +59,8 @@ export interface CreateOrganizationRequest {
 
 export interface UpdateOrganizationRequest {
   organisation_name?: string;
+  agent_name?: string;
+  domain?: string[];
   country?: string;
   sales_team_size?: number;
   company_address?: string;
@@ -61,6 +69,15 @@ export interface UpdateOrganizationRequest {
   summary?: string;
   logo_url?: string;
   is_active?: boolean;
+}
+
+export interface Country {
+  code: string;
+  name: string;
+}
+
+export interface CountriesResponse {
+  countries: Country[];
 }
 
 export interface UpdateOrganizationStatusRequest {
@@ -111,4 +128,55 @@ export interface UpdateStatusResponse {
   updated_at: string;
   approved_at?: string;
   approved_by?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Job Types (async organisation provisioning)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type OrganisationJobType = "create" | "update" | "delete" | "migrate";
+
+export type OrganisationJobStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+/** Returned immediately when POST /create_organisation is called */
+export interface CreateOrganisationJobAccepted {
+  job_id: string;
+  job_type: OrganisationJobType;
+  status: OrganisationJobStatus;
+  message: string;
+  stream_url: string;
+}
+
+/** Active job info embedded in organization list items (for provisioning orgs) */
+export interface ActiveJob {
+  job_id: string;
+  job_type: OrganisationJobType;
+  status: OrganisationJobStatus;
+  progress: number;
+  status_message: string | null;
+  stream_url: string;
+  created_at: string;
+}
+
+/** SSE status event payload */
+export interface JobStatusEvent {
+  job_id: string;
+  status: OrganisationJobStatus;
+  progress: number;
+  status_message: string | null;
+  result_data: Record<string, unknown> | null;
+  error_message: string | null;
+  error_code: string | null;
+  updated_at: string;
+  completed_at?: string | null;
+}
+
+/** SSE complete event payload (lightweight terminal signal) */
+export interface JobCompleteEvent {
+  message: "job_completed" | "job_already_terminal" | string;
 }

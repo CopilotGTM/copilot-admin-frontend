@@ -19,13 +19,22 @@ import {
   Icon,
   Stack,
   Image,
+  createListCollection,
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
 } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { Plus, Trash2, Globe, Link2, Image as ImageIcon } from "lucide-react";
 import type { OrganizationListItem, UpdateOrganizationRequest, OrganizationDetail } from "@/modules/organizations/types";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createOrganizationSchema, type CreateOrganizationInput } from "@/modules/organizations/schemas";
+import { useQuery } from "@tanstack/react-query";
+import { getCountries } from "@/modules/organizations/api";
+import { useColorModeValue } from "@/components/ui/color-mode";
 
 export interface EditOrgDialogProps {
   trigger: React.ReactNode;
@@ -37,9 +46,15 @@ export interface EditOrgDialogProps {
 }
 
 export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditOrgDialogProps>) {
+  const sectionBorder = useColorModeValue("gray.200", "gray.700");
+  const sectionTitle = useColorModeValue("gray.700", "gray.100");
+  const helperText = useColorModeValue("gray.500", "gray.400");
+  const addButtonBgHover = useColorModeValue("gray.50", "whiteAlpha.100");
+
   const {
     register,
     handleSubmit,
+    control,
     setValue,
     watch,
     reset,
@@ -49,6 +64,8 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
     mode: "onChange",
     defaultValues: {
       organisation_name: org.organisation_name ?? "",
+      agent_name: org.agent_name ?? "",
+      domain: org.domain ?? [],
       country: org.country ?? "",
       sales_team_size: org.sales_team_size ?? 0,
       company_address: org.company_address ?? "",
@@ -59,8 +76,21 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
     },
   });
 
+  const { data: countriesData } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getCountries(),
+  });
+
+  const countryCollection = createListCollection({
+    items: countriesData?.countries || [],
+    itemToString: (item) => `${item.name} (${item.code})`,
+    itemToValue: (item) => item.code,
+  });
+
   const original = React.useRef({
     organisation_name: org.organisation_name ?? "",
+    agent_name: org.agent_name ?? "",
+    domain: org.domain ?? [],
     country: org.country ?? "",
     sales_team_size: org.sales_team_size ?? 0,
     company_address: org.company_address ?? "",
@@ -73,9 +103,11 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
   const linked_urls = watch("linked_urls") || [];
   const website_urls = watch("website_urls") || [];
   const logo_url = watch("logo_url") || "";
+  const domain = watch("domain") || [];
 
   const [linkedInput, setLinkedInput] = React.useState("");
   const [websiteInput, setWebsiteInput] = React.useState("");
+  const [domainInput, setDomainInput] = React.useState("");
 
   const addLinkedUrl = () => {
     const v = linkedInput.trim();
@@ -105,6 +137,26 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
     );
   };
 
+  const addDomain = () => {
+    const raw = domainInput.trim();
+    if (!raw) return;
+    const normalized = raw.startsWith("@") ? raw.slice(1) : raw;
+    if (!normalized) return;
+    if (domain.includes(normalized)) {
+      setDomainInput("");
+      return;
+    }
+    setValue("domain", [...domain, normalized], { shouldValidate: true });
+    setDomainInput("");
+  };
+  const removeDomain = (idx: number) => {
+    setValue(
+      "domain",
+      domain.filter((_, i) => i !== idx),
+      { shouldValidate: true },
+    );
+  };
+
   function buildChangedPayload(values: CreateOrganizationInput): UpdateOrganizationRequest {
     const changed: UpdateOrganizationRequest = {};
     const keys = Object.keys(original.current) as (keyof CreateOrganizationInput)[];
@@ -115,7 +167,6 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
         ? JSON.stringify(prevVal) === JSON.stringify(currVal)
         : prevVal === currVal;
       if (!equal) {
-        // Coerce number field
         if (key === "sales_team_size") {
           (changed as any)[key] = Number(currVal as number);
         } else {
@@ -129,9 +180,10 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
   const onSubmit = async (data: CreateOrganizationInput) => {
     const payload = buildChangedPayload(data);
     const res = await onUpdate(org.organisation_id, payload);
-    // Refresh original with latest
     original.current = {
       organisation_name: res.organisation_name ?? data.organisation_name,
+      agent_name: res.agent_name ?? data.agent_name ?? "",
+      domain: res.domain ?? data.domain ?? [],
       country: res.country ?? data.country,
       sales_team_size: res.sales_team_size ?? data.sales_team_size,
       company_address: res.company_address ?? data.company_address,
@@ -172,163 +224,302 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
 
             <Dialog.Body flex="1 1 auto" overflowY="auto">
               <form id={formId} onSubmit={handleSubmit(onSubmit)}>
-                <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-                  <FormControl isRequired>
-                    <FormLabel>Organization Name</FormLabel>
-                    <Input rounded="md" placeholder="New Test Org" {...register("organisation_name")} />
-                    {errors.organisation_name && (
-                      <Text color="red.500" fontSize="xs">{errors.organisation_name.message}</Text>
-                    )}
-                  </FormControl>
+                <Stack gap={5}>
+                  <Box borderWidth="1px" borderColor={sectionBorder} rounded="lg" p={4}>
+                    <Text fontWeight="semibold" color={sectionTitle} mb={3}>
+                      Basics
+                    </Text>
+                    <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
+                      <FormControl isRequired>
+                        <FormLabel>Organization Name</FormLabel>
+                        <Input rounded="md" placeholder="Acme Corp" {...register("organisation_name")} />
+                        {errors.organisation_name && (
+                          <Text color="red.500" fontSize="xs">{errors.organisation_name.message}</Text>
+                        )}
+                      </FormControl>
 
-                  <FormControl isRequired>
-                    <FormLabel>Country</FormLabel>
-                    <Input rounded="md" placeholder="USA" {...register("country")} />
-                    {errors.country && (
-                      <Text color="red.500" fontSize="xs">{errors.country.message}</Text>
-                    )}
-                  </FormControl>
+                      <Controller
+                        control={control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormControl isRequired>
+                            <FormLabel>Country</FormLabel>
+                            <SelectRoot
+                              collection={countryCollection}
+                              name={field.name}
+                              value={field.value ? [field.value] : []}
+                              onValueChange={(details: { value: string[] }) => field.onChange(details.value[0] || "")}
+                            >
+                              <SelectTrigger w="full" rounded="md">
+                                <SelectValueText placeholder="Select country" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {countryCollection.items.map((c) => (
+                                  <SelectItem item={c} key={c.code}>
+                                    {c.name} ({c.code})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </SelectRoot>
+                            {errors.country && (
+                              <Text color="red.500" fontSize="xs">{errors.country.message}</Text>
+                            )}
+                          </FormControl>
+                        )}
+                      />
 
-                  <FormControl>
-                    <FormLabel>Sales team size</FormLabel>
-                    <Input rounded="md" type="number" min={0} placeholder="50" {...register("sales_team_size", { valueAsNumber: true })} />
-                    {errors.sales_team_size && (
-                      <Text color="red.500" fontSize="xs">{errors.sales_team_size.message}</Text>
-                    )}
-                  </FormControl>
+                      <FormControl>
+                        <FormLabel>Agent name</FormLabel>
+                        <Input rounded="md" placeholder="Shield" {...register("agent_name")} />
+                        <Text fontSize="xs" color={helperText} mt={1}>
+                          Optional display name used in agent contexts.
+                        </Text>
+                        {errors.agent_name && (
+                          <Text color="red.500" fontSize="xs">{errors.agent_name.message}</Text>
+                        )}
+                      </FormControl>
 
-                  <FormControl>
-                    <FormLabel>Company address</FormLabel>
-                    <Input rounded="md" placeholder="123 Test Street, Test City" {...register("company_address")} />
-                    {errors.company_address && (
-                      <Text color="red.500" fontSize="xs">{errors.company_address.message}</Text>
-                    )}
-                  </FormControl>
+                      <FormControl>
+                        <FormLabel>Sales team size</FormLabel>
+                        <Input rounded="md" type="number" min={0} placeholder="50" {...register("sales_team_size", { valueAsNumber: true })} />
+                        {errors.sales_team_size && (
+                          <Text color="red.500" fontSize="xs">{errors.sales_team_size.message}</Text>
+                        )}
+                      </FormControl>
 
-                  {/* Linked URLs */}
-                  <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                    <FormControl>
-                      <FormLabel>Linked URLs</FormLabel>
-                      <HStack gap={2}>
-                        <InputGroup
-                          rounded="md"
-                          startElement={
-                            <Button disabled variant="ghost" w="48px" h="48px" rounded="md">
-                              <Icon as={Link2} color="gray.400" />
-                            </Button>
-                          }
-                        >
-                          <Input
-                            rounded="md"
-                            flex={1}
-                            placeholder="https://www.linkedin.com/company/test"
-                            value={linkedInput}
-                            onChange={(e) => setLinkedInput(e.target.value)}
-                          />
-                        </InputGroup>
-                        <IconButton aria-label="Add linked url" rounded="md" onClick={addLinkedUrl}>
-                          <Plus />
-                        </IconButton>
-                      </HStack>
-                      {errors.linked_urls && (
-                        <Text color="red.500" fontSize="xs">{errors.linked_urls.message as string}</Text>
-                      )}
-                      {linked_urls.length > 0 && (
-                        <HStack gap={2} mt={2} flexWrap="wrap">
-                          {linked_urls.map((u, idx) => (
-                            <HStack key={`${u}-${idx}`}>
-                              <Badge variant="subtle" colorPalette="purple" px={2} py={1} rounded="md">{u}</Badge>
-                              <IconButton aria-label="Remove" size="xs" rounded="sm" onClick={() => removeLinkedUrl(idx)}>
-                                <Trash2 />
-                              </IconButton>
-                            </HStack>
-                          ))}
-                        </HStack>
-                      )}
-                    </FormControl>
-                  </Box>
-
-                  {/* Website URLs */}
-                  <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                    <FormControl>
-                      <FormLabel>Website URLs</FormLabel>
-                      <HStack gap={2}>
-                        <InputGroup
-                          rounded="md"
-                          startElement={
-                            <Button disabled variant="ghost" w="48px" h="48px" rounded="md">
-                              <Icon as={Globe} color="gray.400" />
-                            </Button>
-                          }
-                        >
-                          <Input
-                            rounded="md"
-                            flex={1}
-                            placeholder="https://www.test.com"
-                            value={websiteInput}
-                            onChange={(e) => setWebsiteInput(e.target.value)}
-                          />
-                        </InputGroup>
-                        <IconButton aria-label="Add website url" rounded="md" onClick={addWebsiteUrl}>
-                          <Plus />
-                        </IconButton>
-                      </HStack>
-                      {errors.website_urls && (
-                        <Text color="red.500" fontSize="xs">{errors.website_urls.message as string}</Text>
-                      )}
-                      {website_urls.length > 0 && (
-                        <HStack gap={2} mt={2} flexWrap="wrap">
-                          {website_urls.map((u, idx) => (
-                            <HStack key={`${u}-${idx}`}>
-                              <Badge variant="subtle" colorPalette="gray" px={2} py={1} rounded="md">{u}</Badge>
-                              <IconButton aria-label="Remove" size="xs" rounded="sm" onClick={() => removeWebsiteUrl(idx)}>
-                                <Trash2 />
-                              </IconButton>
-                            </HStack>
-                          ))}
-                        </HStack>
-                      )}
-                    </FormControl>
-                  </Box>
-
-                  {/* Summary */}
-                  <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                    <FormControl>
-                      <FormLabel>Summary</FormLabel>
-                      <Textarea rounded="md" rows={3} placeholder="This is a test organization." {...register("summary")} />
-                      {errors.summary && (
-                        <Text color="red.500" fontSize="xs">{errors.summary.message}</Text>
-                      )}
-                    </FormControl>
-                  </Box>
-
-                  {/* Logo URL */}
-                  <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                    <FormControl>
-                      <FormLabel>Logo URL</FormLabel>
-                      <InputGroup
-                        rounded="md"
-                        startElement={
-                          <Button disabled variant="ghost" w="48px" h="48px" rounded="md">
-                            <Icon as={ImageIcon} color="gray.400" />
-                          </Button>
-                        }
-                      >
-                        <Input rounded="md" placeholder="https://www.test.com/logo.png" {...register("logo_url")} />
-                      </InputGroup>
-                      {logo_url && (
-                        <Box mt={3}>
-                          <Text fontSize="sm" color="gray.500" mb={2}>
-                            Preview
+                      <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
+                        <FormControl>
+                          <FormLabel>Domains</FormLabel>
+                          <HStack gap={2} align="stretch">
+                            <Input
+                              rounded="md"
+                              h="48px"
+                              placeholder="acme.com"
+                              value={domainInput}
+                              onChange={(e) => setDomainInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addDomain();
+                                }
+                              }}
+                            />
+                            <IconButton
+                              aria-label="Add domain"
+                              rounded="md"
+                              variant="outline"
+                              borderColor={sectionBorder}
+                              h="48px"
+                              w="48px"
+                              minW="48px"
+                              onClick={addDomain}
+                              _hover={{ bg: addButtonBgHover }}
+                            >
+                              <Plus size={18} />
+                            </IconButton>
+                          </HStack>
+                          <Text fontSize="xs" color={helperText} mt={1}>
+                            Add email domains like <b>acme.com</b>. Press Enter to add.
                           </Text>
-                          <Box borderWidth="1px" rounded="lg" p={2} maxW="220px">
-                            <Image src={logo_url} alt="Logo preview" width="200px" height="auto" />
-                          </Box>
-                        </Box>
-                      )}
-                    </FormControl>
+                          {errors.domain && (
+                            <Text color="red.500" fontSize="xs">{errors.domain.message as string}</Text>
+                          )}
+                          {domain.length > 0 && (
+                            <HStack gap={2} mt={2} flexWrap="wrap">
+                              {domain.map((d, idx) => (
+                                <HStack key={`${d}-${idx}`}>
+                                  <Badge variant="subtle" colorPalette="blue" px={2} py={1} rounded="md">
+                                    {d}
+                                  </Badge>
+                                  <IconButton aria-label="Remove" size="xs" rounded="sm" variant="ghost" onClick={() => removeDomain(idx)}>
+                                    <Trash2 size={16} />
+                                  </IconButton>
+                                </HStack>
+                              ))}
+                            </HStack>
+                          )}
+                        </FormControl>
+                      </Box>
+
+                      <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
+                        <FormControl>
+                          <FormLabel>Company address</FormLabel>
+                          <Input rounded="md" placeholder="123 Market St, San Francisco" {...register("company_address")} />
+                          {errors.company_address && (
+                            <Text color="red.500" fontSize="xs">{errors.company_address.message}</Text>
+                          )}
+                        </FormControl>
+                      </Box>
+                    </Box>
                   </Box>
-                </Box>
+
+                  <Box borderWidth="1px" borderColor={sectionBorder} rounded="lg" p={4}>
+                    <Text fontWeight="semibold" color={sectionTitle} mb={3}>
+                      Links
+                    </Text>
+
+                    <Stack gap={4}>
+                      <FormControl>
+                        <FormLabel>Linked URLs</FormLabel>
+                        <HStack gap={2} align="stretch">
+                          <InputGroup
+                            rounded="md"
+                            startElement={
+                              <Box w="44px" h="100%" display="flex" alignItems="center" justifyContent="center" pointerEvents="none">
+                                <Icon as={Link2} color={helperText} boxSize={"18px"} />
+                              </Box>
+                            }
+                          >
+                            <Input
+                              rounded="md"
+                              h="48px"
+                              ps={"56px"}
+                              flex={1}
+                              placeholder="https://www.linkedin.com/company/acme"
+                              value={linkedInput}
+                              onChange={(e) => setLinkedInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addLinkedUrl();
+                                }
+                              }}
+                            />
+                          </InputGroup>
+                          <IconButton
+                            aria-label="Add linked url"
+                            rounded="md"
+                            variant="outline"
+                            borderColor={sectionBorder}
+                            h="48px"
+                            w="48px"
+                            minW="48px"
+                            onClick={addLinkedUrl}
+                            _hover={{ bg: addButtonBgHover }}
+                          >
+                            <Plus size={18} />
+                          </IconButton>
+                        </HStack>
+                        {errors.linked_urls && (
+                          <Text color="red.500" fontSize="xs">{errors.linked_urls.message as string}</Text>
+                        )}
+                        {linked_urls.length > 0 && (
+                          <HStack gap={2} mt={2} flexWrap="wrap">
+                            {linked_urls.map((u, idx) => (
+                              <HStack key={`${u}-${idx}`}>
+                                <Badge variant="subtle" colorPalette="purple" px={2} py={1} rounded="md">{u}</Badge>
+                                <IconButton aria-label="Remove" size="xs" rounded="sm" variant="ghost" onClick={() => removeLinkedUrl(idx)}>
+                                  <Trash2 size={16} />
+                                </IconButton>
+                              </HStack>
+                            ))}
+                          </HStack>
+                        )}
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Website URLs</FormLabel>
+                        <HStack gap={2} align="stretch">
+                          <InputGroup
+                            rounded="md"
+                            startElement={
+                              <Box w="44px" h="100%" display="flex" alignItems="center" justifyContent="center" pointerEvents="none">
+                                <Icon as={Globe} color={helperText} boxSize={"18px"} />
+                              </Box>
+                            }
+                          >
+                            <Input
+                              rounded="md"
+                              h="48px"
+                              ps={"56px"}
+                              flex={1}
+                              placeholder="https://acme.com"
+                              value={websiteInput}
+                              onChange={(e) => setWebsiteInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addWebsiteUrl();
+                                }
+                              }}
+                            />
+                          </InputGroup>
+                          <IconButton
+                            aria-label="Add website url"
+                            rounded="md"
+                            variant="outline"
+                            borderColor={sectionBorder}
+                            h="48px"
+                            w="48px"
+                            minW="48px"
+                            onClick={addWebsiteUrl}
+                            _hover={{ bg: addButtonBgHover }}
+                          >
+                            <Plus size={18} />
+                          </IconButton>
+                        </HStack>
+                        {errors.website_urls && (
+                          <Text color="red.500" fontSize="xs">{errors.website_urls.message as string}</Text>
+                        )}
+                        {website_urls.length > 0 && (
+                          <HStack gap={2} mt={2} flexWrap="wrap">
+                            {website_urls.map((u, idx) => (
+                              <HStack key={`${u}-${idx}`}>
+                                <Badge variant="subtle" colorPalette="gray" px={2} py={1} rounded="md">{u}</Badge>
+                                <IconButton aria-label="Remove" size="xs" rounded="sm" variant="ghost" onClick={() => removeWebsiteUrl(idx)}>
+                                  <Trash2 size={16} />
+                                </IconButton>
+                              </HStack>
+                            ))}
+                          </HStack>
+                        )}
+                      </FormControl>
+                    </Stack>
+                  </Box>
+
+                  <Box borderWidth="1px" borderColor={sectionBorder} rounded="lg" p={4}>
+                    <Text fontWeight="semibold" color={sectionTitle} mb={3}>
+                      Branding
+                    </Text>
+
+                    <Stack gap={4}>
+                      <FormControl>
+                        <FormLabel>Summary</FormLabel>
+                        <Textarea rounded="md" rows={3} placeholder="Short description of the organization" {...register("summary")} />
+                        {errors.summary && (
+                          <Text color="red.500" fontSize="xs">{errors.summary.message}</Text>
+                        )}
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Logo URL</FormLabel>
+                        <InputGroup
+                          rounded="md"
+                          startElement={
+                            <Box w="44px" h="100%" display="flex" alignItems="center" justifyContent="center" pointerEvents="none">
+                              <Icon as={ImageIcon} color={helperText} boxSize={"18px"} />
+                            </Box>
+                          }
+                        >
+                          <Input rounded="md" h="48px" ps={"56px"} placeholder="https://.../logo.png" {...register("logo_url")} />
+                        </InputGroup>
+                        {logo_url && (
+                          <Box mt={3}>
+                            <Text fontSize="xs" color={helperText} mb={2}>
+                              Preview
+                            </Text>
+                            <Box borderWidth="1px" borderColor={sectionBorder} rounded="lg" p={2} maxW="220px">
+                              <Image src={logo_url} alt="Logo" width="200px" height="auto" />
+                            </Box>
+                          </Box>
+                        )}
+                        {errors.logo_url && (
+                          <Text color="red.500" fontSize="xs">{errors.logo_url.message}</Text>
+                        )}
+                      </FormControl>
+                    </Stack>
+                  </Box>
+                </Stack>
               </form>
             </Dialog.Body>
 
@@ -340,7 +531,18 @@ export default function EditOrgDialog({ trigger, org, onUpdate }: Readonly<EditO
                   Cancel
                 </Button>
               </Dialog.ActionTrigger>
-              <Button type="submit" form={formId} bg="purple.600" color="white" rounded="md" lineHeight="24px" p={4} _hover={{ bg: "purple.500" }} loading={isSubmitting} disabled={!isValid}>
+              <Button
+                type="submit"
+                form={formId}
+                bg="purple.600"
+                color="white"
+                rounded="md"
+                lineHeight="24px"
+                p={4}
+                _hover={{ bg: "purple.500" }}
+                loading={isSubmitting}
+                disabled={!isValid}
+              >
                 Update Organization
               </Button>
             </Dialog.Footer>

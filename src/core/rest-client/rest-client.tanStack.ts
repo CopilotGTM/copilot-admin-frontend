@@ -1,12 +1,5 @@
 // src/core/rest-client/rest-client.tanStack.ts
-import { QueryClient } from "@tanstack/react-query";
+// Backwards-compatible alias to the shared react-query client.
+import queryClient from "../api/query-client";
 
-const restTanStackClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-    },
-  },
-});
-
-export default restTanStackClient;
+export default queryClient;

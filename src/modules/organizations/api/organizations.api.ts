@@ -7,9 +7,10 @@ import type {
   CreateOrganizationRequest,
   UpdateOrganizationRequest,
   UpdateOrganizationStatusRequest,
-  DeleteOrganizationResponse,
   OrganisationHistoryResponse,
   UpdateStatusResponse,
+  CountriesResponse,
+  CreateOrganisationJobAccepted,
 } from "../types/organization.types";
 
 const BASE = "/organisations" as const;
@@ -81,18 +82,6 @@ export async function updateOrganizationStatus(
   return res.data.data;
 }
 
-export async function deleteOrganization(
-  organisation_id: string,
-): Promise<DeleteOrganizationResponse> {
-  const res = await axiosInstance.delete<ApiResponse<DeleteOrganizationResponse>>(
-    `${BASE}/${organisation_id}/delete`,
-  );
-  if (res.data.status !== "SUCCESS" || !res.data.data) {
-    throw new Error(res.data.message || "Failed to delete organization");
-  }
-  return res.data.data;
-}
-
 // History endpoints
 export async function getAllOrganisationsHistory(params: {
   limit?: number;
@@ -118,6 +107,37 @@ export async function getOrganisationHistory(
   );
   if (res.data.status !== "SUCCESS" || !res.data.data) {
     throw new Error(res.data.message || "Failed to fetch organization history");
+  }
+  return res.data.data;
+}
+
+export async function getCountries(): Promise<CountriesResponse> {
+  const res = await axiosInstance.get<ApiResponse<CountriesResponse>>(
+    `${BASE}/countries`,
+  );
+  if (res.data.status !== "SUCCESS" || !res.data.data) {
+    throw new Error(res.data.message || "Failed to fetch countries");
+  }
+  return res.data.data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Job endpoints (async organisation provisioning)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Create organisation (async, job-based).
+ * Returns a job acceptance payload; use SSE stream for progress tracking.
+ */
+export async function createOrganizationAsync(
+  payload: CreateOrganizationRequest,
+): Promise<CreateOrganisationJobAccepted> {
+  const res = await axiosInstance.post<ApiResponse<CreateOrganisationJobAccepted>>(
+    `${BASE}/create_organisation`,
+    payload,
+  );
+  if (res.data.status !== "SUCCESS" || !res.data.data) {
+    throw new Error(res.data.message || "Failed to create organization");
   }
   return res.data.data;
 }
