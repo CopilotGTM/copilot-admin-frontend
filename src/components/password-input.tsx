@@ -32,7 +32,7 @@ export default function PasswordInput({
 
       <InputGroup
         startElement={
-          <Button disabled variant={"ghost"}>
+          <Button disabled variant={"ghost"} w={"48px"} h={"48px"} type="button">
             <Icon as={KeyRound} color="gray.400" size={"md"} />
           </Button>
         }
@@ -40,6 +40,9 @@ export default function PasswordInput({
           <Button
             variant="ghost"
             onClick={() => setShowPassword((prev) => !prev)}
+            w={"48px"}
+            h={"48px"}
+            type="button"
           >
             {showPassword ? <Eye /> : <EyeOff />}
           </Button>
@@ -50,6 +53,8 @@ export default function PasswordInput({
           variant={"outline"}
           borderRadius={6}
           height={"48px"}
+          ps={"56px"}
+          pe={"56px"}
           type={showPassword ? "text" : "password"}
           placeholder={placeholder}
           _placeholder={{

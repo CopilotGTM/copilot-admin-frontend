@@ -2,22 +2,24 @@ import { z } from "zod";
 
 export const urlString = z
   .string()
-  .url({ message: "Enter a valid URL" });
+  .url({ message: "Enter a valid URL" })
+  .or(z.literal(""));
 
 export const createOrganizationSchema = z.object({
   organisation_name: z.string().min(1, "Organization name is required"),
+  agent_name: z.string().optional(),
+  domain: z.array(z.string().min(1, "Enter a valid domain")).optional().default([]),
   country: z.string().min(1, "Country is required"),
   sales_team_size: z
     .number({ invalid_type_error: "Enter a valid number" })
     .int({ message: "Must be an integer" })
     .min(0, "Cannot be negative")
-    .default(0),
-  company_address: z.string().min(1, "Company address is required"),
-  billing_address: z.string().min(1, "Billing address is required"),
-  linked_urls: z.array(urlString).default([]),
-  website_urls: z.array(urlString).default([]),
-  summary: z.string().min(1, "Summary is required"),
-  logo_url: urlString,
+    .optional(),
+  company_address: z.string().optional(),
+  linked_urls: z.array(urlString).optional().default([]),
+  website_urls: z.array(urlString).optional().default([]),
+  summary: z.string().optional(),
+  logo_url: urlString.optional(),
 });
 
 // Input type (what the form accepts before defaults applied)

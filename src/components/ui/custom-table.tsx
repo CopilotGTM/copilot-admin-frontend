@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { Table, Pagination, Stack, ButtonGroup, IconButton } from "@chakra-ui/react"
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu"
+import { useColorModeValue } from "@/components/ui/color-mode"
 
 export type Column<T> = {
   header: string
@@ -20,6 +21,10 @@ export interface CustomTableProps<T extends { id: string | number }> {
   pageSize?: number
   /** Hide built-in pagination (useful when using server-side cursor pagination) */
   hidePagination?: boolean
+  /** Optional row click handler */
+  onRowClick?: (row: T) => void
+  /** Optional selected row id for highlighting */
+  selectedRowId?: string | number
 }
 
 /**
@@ -30,10 +35,15 @@ export function CustomTable<T extends { id: string | number }>({
   columns,
   pageSize = 10,
   hidePagination = false,
+  onRowClick,
+  selectedRowId,
 }: CustomTableProps<T>) {
   const [page, setPage] = useState(1)
   const startIdx = (page - 1) * pageSize
   const pageData = data.slice(startIdx, startIdx + pageSize)
+
+  const selectedBg = useColorModeValue("gray.50", "whiteAlpha.100")
+  const hoverBg = useColorModeValue("gray.50", "whiteAlpha.50")
 
   return (
     <Stack width="full" gap="5">
@@ -50,7 +60,24 @@ export function CustomTable<T extends { id: string | number }>({
           </Table.Header>
           <Table.Body>
             {pageData.map((row) => (
-              <Table.Row key={row.id}>
+              <Table.Row
+                key={row.id}
+                bg={selectedRowId !== undefined && row.id === selectedRowId ? selectedBg : undefined}
+                cursor={onRowClick ? "pointer" : undefined}
+                _hover={onRowClick ? { bg: hoverBg } : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault()
+                          onRowClick(row)
+                        }
+                      }
+                    : undefined
+                }
+              >
                 {columns.map((col) => (
                   <Table.Cell key={String(col.key)} paddingX={4} paddingY={3}>
                     {col.render ? col.render(row) : String(row[col.key])}

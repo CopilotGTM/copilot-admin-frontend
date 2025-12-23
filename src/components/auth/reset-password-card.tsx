@@ -22,8 +22,8 @@ import { resetPassword } from "../../lib/password";
 import { toaster } from "../ui/toaster";
 
 interface ResetPasswordProps {
-  tokenHash: string;
-  forceChange: boolean;
+  readonly tokenHash: string;
+  readonly forceChange: boolean;
 }
 
 export default function ResetPasswordCard({ tokenHash, forceChange }: ResetPasswordProps) {
@@ -120,29 +120,29 @@ export default function ResetPasswordCard({ tokenHash, forceChange }: ResetPassw
               </Text>
               <Stack gap={1} fontWeight="normal">
                 <Text
-                  color={!passwordValidations.length ? "red.500" : "gray.700"}
+                  color={passwordValidations.length ? "gray.700" : "red.500"}
                 >
                   • Minimum 8 characters
                 </Text>
                 <Text
                   color={
-                    !passwordValidations.uppercase ? "red.500" : "gray.700"
+                    passwordValidations.uppercase ? "gray.700" : "red.500"
                   }
                 >
                   • At least one uppercase letter
                 </Text>
                 <Text
-                  color={!passwordValidations.number ? "red.500" : "gray.700"}
+                  color={passwordValidations.number ? "gray.700" : "red.500"}
                 >
                   • At least one number
                 </Text>
                 <Text
-                  color={!passwordValidations.special ? "red.500" : "gray.700"}
+                  color={passwordValidations.special ? "gray.700" : "red.500"}
                 >
                   • At least one special character
                 </Text>
                 <Text
-                  color={!passwordValidations.match ? "red.500" : "gray.700"}
+                  color={passwordValidations.match ? "gray.700" : "red.500"}
                 >
                   • Passwords must match
                 </Text>

@@ -1,8 +1,8 @@
 // User types
 
 export type UserAppRole = "member" | "admin";
-export type SupabaseUserStatus = "active" | "inactive" | "pending_setup";
-export type AdminUserStatus = "pending" | "approved" | "rejected" | "suspended";
+export type SupabaseUserStatus = "ACTIVE" | "INACTIVE" | "PASSWORD_CHANGE_REQUIRED";
+export type AdminUserStatus = "pending" | "approved" | "rejected" | "suspended" | "deactivated";
 export type UserEventType =
   | "created"
   | "updated"
@@ -22,6 +22,7 @@ export interface UserProfile {
   organisation_id: string;
   organisation_role: string;
   job_title: string;
+  user_role: UserAppRole;
   status: SupabaseUserStatus;
   admin_status: AdminUserStatus;
   created_at: string;
@@ -41,7 +42,7 @@ export interface CreateUserRequest {
   email: string;
   organisation_id: string;
   user_role: UserAppRole;
-  job_title: string;
+  job_title?: string;
   organisation_role: string;
 }
 
@@ -79,10 +80,12 @@ export interface UserHistoryItem {
   id: string;
   user_id: string;
   action: UserEventType;
-  note: string;
-  details: Record<string, unknown>;
+  note: string | null;
+  details: Record<string, unknown> | null;
   created_at: string;
-  actor_admin_id: string;
+  actor_admin_id: string | null;
+  actor_admin_name?: string | null;
+  actor_admin_email?: string | null;
 }
 
 export interface ListUserHistoryResponse {

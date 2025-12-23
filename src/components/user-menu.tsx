@@ -2,7 +2,7 @@ import React from "react";
 import { Menu, Portal, HStack, Text, Box, Avatar, VStack, Separator, Icon } from "@chakra-ui/react";
 import { useColorModeValue, useColorMode } from "./ui/color-mode";
 import { ChevronDown, Globe, LogOut, User, Sun, Moon } from "lucide-react";
-import useAuthStore from "../app/stores/use-auth-store";
+import { useAuthStore } from "@/modules/auth/store";
 import { useRouter } from "next/navigation";
 import { logout } from "../lib/auth";
 
@@ -27,8 +27,8 @@ const UserMenu = ({ isCollapsed = false }) => {
   };
 
   const handleVisitWebsite = () => {
-    if (typeof window !== "undefined") {
-      window.open("https://copilotgtm.ai", "_blank", "noopener,noreferrer");
+    if (globalThis.window !== undefined) {
+      globalThis.window.open("https://copilotgtm.ai", "_blank", "noopener,noreferrer");
     }
   };
 

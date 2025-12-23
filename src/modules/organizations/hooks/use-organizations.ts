@@ -5,7 +5,10 @@ import {
   createOrganization,
   updateOrganization,
   updateOrganizationStatus,
-  deleteOrganization,
+  getAllOrganisationsHistory,
+  getOrganisationHistory,
+  getCountries,
+  createOrganizationAsync,
 } from "../api/organizations.api";
 import type {
   CreateOrganizationRequest,
@@ -21,6 +24,12 @@ export const organizationKeys = {
     [...organizationKeys.lists(), params] as const,
   details: () => [...organizationKeys.all, "detail"] as const,
   detail: (id: string) => [...organizationKeys.details(), id] as const,
+  countries: () => [...organizationKeys.all, "countries"] as const,
+  histories: () => [...organizationKeys.all, "history"] as const,
+  allHistory: (params?: { limit?: number; cursor?: string }) =>
+    [...organizationKeys.histories(), "all", params] as const,
+  history: (id: string, params?: { limit?: number; cursor?: string }) =>
+    [...organizationKeys.histories(), id, params] as const,
 };
 
 // List organizations
@@ -37,6 +46,13 @@ export function useOrganization(organisationId: string) {
     queryKey: organizationKeys.detail(organisationId),
     queryFn: () => getOrganization(organisationId),
     enabled: !!organisationId,
+  });
+}
+
+export function useCountries() {
+  return useQuery({
+    queryKey: organizationKeys.countries(),
+    queryFn: () => getCountries(),
   });
 }
 
@@ -80,14 +96,36 @@ export function useUpdateOrganizationStatus() {
   });
 }
 
-// Delete organization
-export function useDeleteOrganization() {
-  const queryClient = useQueryClient();
-  
+// All organisations history (super_admin only)
+export function useAllOrganisationsHistory(params?: { limit?: number; cursor?: string }) {
+  return useQuery({
+    queryKey: organizationKeys.allHistory(params),
+    queryFn: () => getAllOrganisationsHistory(params),
+  });
+}
+
+// Single organisation history
+export function useOrganisationHistory(
+  organisationId: string,
+  params?: { limit?: number; cursor?: string },
+) {
+  return useQuery({
+    queryKey: organizationKeys.history(organisationId, params),
+    queryFn: () => getOrganisationHistory(organisationId, params),
+    enabled: !!organisationId,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Job hooks (async organisation provisioning)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Create organisation (async, job-based).
+ * Returns job acceptance payload; use SSE stream for progress tracking.
+ */
+export function useCreateOrganizationAsync() {
   return useMutation({
-    mutationFn: (organisationId: string) => deleteOrganization(organisationId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: organizationKeys.lists() });
-    },
+    mutationFn: (payload: CreateOrganizationRequest) => createOrganizationAsync(payload),
   });
 }

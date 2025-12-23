@@ -1,17 +1,19 @@
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+"use client";
+
 import { ReactNode } from "react";
-import ChakraProvider from "./chakra-provider";
-import RestQueryClientProvider from "../components/HOC/restQueryClientProvider/RestQueryClientProvider";
+import EmotionRegistry from "./emotion-registry";
+import { AppProviders } from "@/core/providers";
 
 interface ProvidersProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <RestQueryClientProvider>
-      <ChakraProvider>{children}</ChakraProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </RestQueryClientProvider>
+    <EmotionRegistry>
+      <AppProviders defaultTheme="light" enableSystem={false}>
+        {children}
+      </AppProviders>
+    </EmotionRegistry>
   );
 }

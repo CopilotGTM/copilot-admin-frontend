@@ -18,24 +18,29 @@ import { IconType } from "react-icons";
 
 import { useColorModeValue } from "@chakra-ui/system";
 import { SidebarClose } from "./sidebar-close";
-import { Bell, Building, Settings } from "lucide-react";
+import { Bell, Building2, Home, Settings } from "lucide-react";
 import UserMenu from "./user-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import logo from "@/../public/logo.svg";
 import Image from "next/image";
+import Link from "next/link";
 
 interface LinkItemProps {
   name: string;
   icon: IconType;
 }
 
+const ENABLE_NOTIFICATIONS =
+  process.env.NEXT_PUBLIC_ENABLE_NOTIFICATIONS !== "false";
+const ENABLE_SETTINGS = process.env.NEXT_PUBLIC_ENABLE_SETTINGS !== "false";
+
 const mainLinkItems: Array<LinkItemProps> = [
-  { name: "Organizations", icon: Building }
+  { name: "Organizations", icon: Building2 }
 ];
 
 const secondaryLinkItems: Array<LinkItemProps> = [
-  { name: "Notifications", icon: Bell },
-  { name: "Settings", icon: Settings },
+  ...(ENABLE_NOTIFICATIONS ? [{ name: "Notifications", icon: Bell }] : []),
+  ...(ENABLE_SETTINGS ? [{ name: "Settings", icon: Settings }] : []),
 ];
 
 export interface CollapsibleSidebarProps {
@@ -121,19 +126,31 @@ const SidebarContent = ({
             gap={4}
             justifyContent={isCollapsed ? "center" : "start"}
           >
-            <>
+            <Link
+              href="/organizations"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: isCollapsed ? 0 : 12,
+                textDecoration: "none",
+              }}
+              aria-label="Go to Organizations"
+            >
               <Image src={logo} alt="Copilot-GTM logo" />
               {!isCollapsed && (
-                <Text
-                  fontSize="md"
-                  fontWeight="medium"
-                  lineHeight={"24px"}
-                  color="rgba(140, 86, 176, 1)"
-                >
-                  CoPilotGTM
-                </Text>
+                <Flex alignItems="center" gap={2}>
+                  <Icon as={Home} fontSize="18" color="rgba(140, 86, 176, 1)" />
+                  <Text
+                    fontSize="md"
+                    fontWeight="medium"
+                    lineHeight={"24px"}
+                    color="rgba(140, 86, 176, 1)"
+                  >
+                    CoPilotGTM
+                  </Text>
+                </Flex>
               )}
-            </>
+            </Link>
           </Flex>
           {mainLinkItems.map((link) => (
             <Tooltip

@@ -3,12 +3,26 @@
 import React from "react";
 import { Button, CloseButton, Dialog, Portal, Text, Box, Separator, Stack, Badge } from "@chakra-ui/react";
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import type { UserListItem } from "@/modules/users/types";
+import type { UserListItem, SupabaseUserStatus, AdminUserStatus } from "@/modules/users/types";
 
 export interface ViewUserDialogProps {
   trigger: React.ReactNode;
   user: UserListItem;
 }
+
+const supabaseStatusColor: Record<SupabaseUserStatus, string> = {
+  ACTIVE: "green",
+  INACTIVE: "gray",
+  PASSWORD_CHANGE_REQUIRED: "yellow",
+};
+
+const adminStatusColor: Record<AdminUserStatus, string> = {
+  pending: "yellow",
+  approved: "green",
+  rejected: "red",
+  suspended: "orange",
+  deactivated: "gray",
+};
 
 export default function ViewUserDialog({ trigger, user }: Readonly<ViewUserDialogProps>) {
   return (
@@ -51,8 +65,8 @@ export default function ViewUserDialog({ trigger, user }: Readonly<ViewUserDialo
                 <FormControl>
                   <FormLabel>Status</FormLabel>
                   <Stack direction="row" gap={2}>
-                    <Badge variant="subtle">{user.status}</Badge>
-                    <Badge variant="subtle">{user.admin_status}</Badge>
+                    <Badge variant="subtle" colorPalette={supabaseStatusColor[user.status]}>{user.status}</Badge>
+                    <Badge variant="subtle" colorPalette={adminStatusColor[user.admin_status]}>{user.admin_status}</Badge>
                   </Stack>
                 </FormControl>
               </Box>

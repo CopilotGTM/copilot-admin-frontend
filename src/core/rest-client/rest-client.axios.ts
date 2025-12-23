@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
-import useAuthStore from "../../app/stores/use-auth-store";
+import { useAuthStore } from "@/modules/auth/store";
 import { refreshAccessToken } from "../../lib/auth";
 
 const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
@@ -15,7 +15,9 @@ let pendingRequestsQueue: Array<(token: string | null) => void> = [];
 
 // Helper to process queue after refresh resolves
 function processQueue(newToken: string | null) {
-  pendingRequestsQueue.forEach((callback) => callback(newToken));
+  for (const callback of pendingRequestsQueue) {
+    callback(newToken);
+  }
   pendingRequestsQueue = [];
 }
 
@@ -36,30 +38,30 @@ restAxiosInstance.interceptors.response.use(
     const originalRequest: AxiosRequestConfig & { _retry?: boolean } = error.config || {};
 
     // If no response or not 401, just reject
-    if (!error.response || error.response.status !== 401) {
-      return Promise.reject(error);
+    if (!error.response?.status || error.response.status !== 401) {
+      throw error;
     }
 
     // Prevent infinite loop
     if (originalRequest._retry) {
-      return Promise.reject(error);
+      throw error;
     }
 
     // Avoid on auth endpoints
     const url = originalRequest.url || "";
-    const isAuthEndpoint = /\/auth\/(login|refresh|reset-password|forget-password)/.test(url);
+    const isAuthEndpoint = /\/auth\/(login|refresh-token|refresh|forgot-password|reset-password|logout)/.test(url);
     if (isAuthEndpoint) {
-      return Promise.reject(error);
+      throw error;
     }
 
     const { refresh_token, updateTokens, clearAuth } = useAuthStore.getState();
 
     if (!refresh_token) {
       clearAuth();
-      if (typeof window !== "undefined") {
-        window.location.href = "/signin";
+      if (globalThis.window !== undefined) {
+        globalThis.location.href = "/signin";
       }
-      return Promise.reject(error);
+      throw error;
     }
 
     // Queue the request if a refresh is already happening
@@ -96,13 +98,13 @@ restAxiosInstance.interceptors.response.use(
       processQueue(newAccessToken);
 
       return restAxiosInstance(originalRequest);
-    } catch (refreshErr) {
+    } catch (error_) {
       processQueue(null);
       clearAuth();
-      if (typeof window !== "undefined") {
-        window.location.href = "/signin";
+      if (globalThis.window !== undefined) {
+        globalThis.location.href = "/signin";
       }
-      return Promise.reject(refreshErr);
+      throw error_;
     } finally {
       isRefreshing = false;
     }

@@ -11,8 +11,20 @@ import { LuMoon, LuSun } from "react-icons/lu";
 export interface ColorModeProviderProps extends ThemeProviderProps {}
 
 export function ColorModeProvider(props: ColorModeProviderProps) {
+  const { children, ...rest } = props;
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Keep server + initial client render identical to avoid hydration mismatch.
+  if (!mounted) return <>{children}</>;
+
   return (
-    <ThemeProvider attribute="class" disableTransitionOnChange {...props} />
+    <ThemeProvider attribute="class" disableTransitionOnChange {...rest}>
+      {children}
+    </ThemeProvider>
   );
 }
 

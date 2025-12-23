@@ -15,8 +15,8 @@ const cookieStorage = {
   setItem: (name: string, value: unknown) => {
     Cookies.set(name, String(value), {
       expires: tokenCookieExpiryDays,
-      secure: true,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
     });
   },
   removeItem: (name: string) => Cookies.remove(name),

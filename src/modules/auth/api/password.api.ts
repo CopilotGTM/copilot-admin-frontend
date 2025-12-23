@@ -1,8 +1,8 @@
 import axiosInstance from "@/core/api/axios-instance";
 
 const PASSWORD_ENDPOINTS = {
-  forgotPassword: "/admin/auth/forget-password",
-  resetPassword: "/admin/auth/reset-password",
+  forgotPassword: "/auth/forgot-password",
+  resetPassword: "/auth/reset-password",
 } as const;
 
 export interface ForgotPasswordPayload {
@@ -10,9 +10,10 @@ export interface ForgotPasswordPayload {
 }
 
 export interface ResetPasswordPayload {
-  token: string;
-  password: string;
-  confirmPassword: string;
+  token_hash: string;
+  new_password: string;
+  confirm_password?: string;
+  action?: "forgot" | "force_change";
 }
 
 export interface ForgotPasswordResponse {

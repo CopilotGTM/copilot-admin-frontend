@@ -1,7 +1,8 @@
 import { LoginInput } from "../app/schemas/auth";
-import useAuthStore from "../app/stores/use-auth-store";
+import { useAuthStore } from "@/modules/auth/store";
 import restAxiosInstance from "../core/rest-client/rest-client.axios";
 import { clearRememberedEmail } from "./remember-me";
+import type { ApiResponse } from "@/types/api.types";
 
 export interface AdminUser {
   email: string;
@@ -20,7 +21,7 @@ export interface AdminTokens {
 }
 
 export interface AdminAuthResponse {
-  success: boolean;
+  status: "SUCCESS" | "ERROR";
   message: string;
   data: AdminUser & {
     tokens?: AdminTokens;
@@ -39,27 +40,22 @@ export const login = async (data: LoginInput): Promise<AdminAuthResponse> => {
 export const refreshAccessToken = async (
   refresh_token: string,
 ): Promise<AdminTokens> => {
-  const response = await restAxiosInstance.post<{ data: AdminTokens }>(
-    "/auth/access_token",
+  const response = await restAxiosInstance.post<ApiResponse<AdminTokens>>(
+    "/auth/refresh-token",
     { refresh_token },
   );
+
+  if (response.data.status !== "SUCCESS" || !response.data.data) {
+    throw new Error(response.data.message || "Failed to refresh token");
+  }
+
   return response.data.data;
 };
 
 export const logout = (): void => {
-  if (typeof window !== "undefined") {
+  if (globalThis.window !== undefined) {
     const { clearAuth } = useAuthStore.getState();
     clearAuth();
     clearRememberedEmail();
   }
 };
-
-// export const getCurrentUser = async (): Promise<User | null> => {
-//   try {
-//     const response = await restAxiosInstance.get<User>("/auth/me");
-//     return response.data;
-//     // eslint-disable-next-line unused-imports/no-unused-vars
-//   } catch (error) {
-//     return null;
-//   }
-// };
