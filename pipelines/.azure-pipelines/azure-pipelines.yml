@@ -48,28 +48,76 @@ variables:
 
 stages:
   # ==========================================================================
-  # Stage 1: Build & Push Docker Image
+  # Stage 1a: Build & Push Docker Image (Dev)
   # ==========================================================================
-  - stage: BuildAndPush
-    displayName: "Build & Push Docker Image to ACR"
+  - stage: BuildAndPushDev
+    displayName: "Build & Push Docker Image (Dev)"
+    condition: not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))
     variables:
-      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
-        - group: app-secrets-prod
-        - name: API_BASE_URL
-          value: 'https://api.copilotgtm.com/admin'
-      ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
-        - group: app-secrets-dev
-        - name: API_BASE_URL
-          value: 'https://devapi.copilotgtm.com/admin'
+      - group: app-secrets-dev
+      - name: API_BASE_URL
+        value: 'https://devapi.copilotgtm.com/admin'
     jobs:
       - job: Build
         displayName: "Build and Push to ACR"
         pool:
-          # Dynamic pool: release/* -> prod, else -> dev
-          ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
-            name: 'StaticAgentPool-prod'
-          ${{ else }}:
-            name: 'StaticAgentPool'
+          name: 'StaticAgentPool'
+        steps:
+          - checkout: self
+
+          - script: |
+              echo "##[group]Build Configuration"
+              echo "Branch: $(Build.SourceBranch)"
+              echo "Build ID: $(Build.BuildId)"
+              echo "Tag: $(tag)"
+              echo "##[endgroup]"
+              echo ""
+              echo "##[group]Environment URLs"
+              echo "API_BASE_URL: $(API_BASE_URL)"
+              echo "ACR_LOGIN_SERVER: $(ACR_LOGIN_SERVER)"
+              echo "##[endgroup]"
+            displayName: "Echo Build Variables"
+
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "login"
+
+          - script: |
+              docker build \
+                --build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL) \
+                -t $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag) \
+                -t $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest \
+                -f Dockerfile .
+            displayName: "Build Docker Image with Build Args"
+
+          - script: |
+              docker push $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)
+              docker push $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest
+            displayName: "Push Docker Image to ACR"
+
+          - script: |
+              echo "##[section]Build Complete!"
+              echo "Image: $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+              echo "Latest: $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest"
+            displayName: "Build Summary"
+
+  # ==========================================================================
+  # Stage 1b: Build & Push Docker Image (Prod)
+  # ==========================================================================
+  - stage: BuildAndPushProd
+    displayName: "Build & Push Docker Image (Prod)"
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')
+    variables:
+      - group: app-secrets-prod
+      - name: API_BASE_URL
+        value: 'https://api.copilotgtm.com/admin'
+    jobs:
+      - job: Build
+        displayName: "Build and Push to ACR"
+        pool:
+          name: 'StaticAgentPool-prod'
         steps:
           - checkout: self
 
@@ -116,7 +164,7 @@ stages:
   # ==========================================================================
   - stage: DeployDev
     displayName: "Deploy to Dev App Service"
-    dependsOn: BuildAndPush
+    dependsOn: BuildAndPushDev
     # Deploy to dev for ANY branch except release/* (allows manual runs from feature/*, hotfix/*, etc.)
     condition: and(succeeded(), not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')), ne(variables['Build.Reason'], 'PullRequest'))
     variables:
@@ -162,7 +210,7 @@ stages:
   # ==========================================================================
   - stage: DeployProd
     displayName: "Deploy to Prod App Service"
-    dependsOn: BuildAndPush
+    dependsOn: BuildAndPushProd
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), ne(variables['Build.Reason'], 'PullRequest'))
     variables:
       - group: app-secrets-prod
