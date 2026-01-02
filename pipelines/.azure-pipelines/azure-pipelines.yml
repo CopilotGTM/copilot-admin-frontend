@@ -56,11 +56,11 @@ stages:
       ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
         - group: app-secrets-prod
         - name: API_BASE_URL
-          value: ${{ variables.PROD_API_BASE_URL }}
+          value: 'https://api.copilotgtm.com/admin'
       ${{ if not(startsWith(variables['Build.SourceBranch'], 'refs/heads/release/')) }}:
         - group: app-secrets-dev
         - name: API_BASE_URL
-          value: ${{ variables.DEV_API_BASE_URL }}
+          value: 'https://devapi.copilotgtm.com/admin'
     jobs:
       - job: Build
         displayName: "Build and Push to ACR"
