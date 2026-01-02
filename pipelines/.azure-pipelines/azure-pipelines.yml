@@ -53,15 +53,9 @@ stages:
   - stage: BuildAndPush
     displayName: "Build & Push Docker Image to ACR"
     variables:
-      # Dynamic variable group for secrets (ACR credentials, etc.)
-      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/') }}:
-        - group: app-secrets-prod
-        - name: API_BASE_URL
-          value: $(PROD_API_BASE_URL)
-      ${{ else }}:
-        - group: app-secrets-dev
-        - name: API_BASE_URL
-          value: $(DEV_API_BASE_URL)
+      - group: ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), 'app-secrets-prod', 'app-secrets-dev' }}
+      - name: API_BASE_URL
+        value: ${{ if startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), variables.PROD_API_BASE_URL, variables.DEV_API_BASE_URL }}
     jobs:
       - job: Build
         displayName: "Build and Push to ACR"
