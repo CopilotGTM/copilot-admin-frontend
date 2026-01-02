@@ -84,18 +84,18 @@ stages:
               containerRegistry: "$(ACR_SERVICE_CONNECTION)"
               command: "login"
 
-          - script: |
-              docker build \
-                --build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL) \
-                -t $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag) \
-                -t $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest \
-                -f Dockerfile .
-            displayName: "Build Docker Image with Build Args"
-
-          - script: |
-              docker push $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)
-              docker push $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest
-            displayName: "Push Docker Image to ACR"
+          - task: Docker@2
+            displayName: "Build and Push Docker Image"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "buildAndPush"
+              repository: "copilotgtm-frontend-admin-app"
+              Dockerfile: "$(dockerfilePath)"
+              buildContext: "$(Build.SourcesDirectory)"
+              tags: |
+                $(tag)
+                latest
+              arguments: "--build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
 
           - script: |
               echo "##[section]Build Complete!"
@@ -140,18 +140,18 @@ stages:
               containerRegistry: "$(ACR_SERVICE_CONNECTION)"
               command: "login"
 
-          - script: |
-              docker build \
-                --build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL) \
-                -t $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag) \
-                -t $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest \
-                -f Dockerfile .
-            displayName: "Build Docker Image with Build Args"
-
-          - script: |
-              docker push $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)
-              docker push $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:latest
-            displayName: "Push Docker Image to ACR"
+          - task: Docker@2
+            displayName: "Build and Push Docker Image"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "buildAndPush"
+              repository: "copilotgtm-frontend-admin-app"
+              Dockerfile: "$(dockerfilePath)"
+              buildContext: "$(Build.SourcesDirectory)"
+              tags: |
+                $(tag)
+                latest
+              arguments: "--build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
 
           - script: |
               echo "##[section]Build Complete!"
