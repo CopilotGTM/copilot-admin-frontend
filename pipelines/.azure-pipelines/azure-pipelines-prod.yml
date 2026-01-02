@@ -1,0 +1,120 @@
+# ============================================================================
+# Azure DevOps Pipeline - Admin App PROD Environment
+# ============================================================================
+# This pipeline handles PROD deployments only.
+# Triggers on: release/* branches
+# Deploys to: Prod App Service (with approval gate)
+# ============================================================================
+
+trigger:
+  branches:
+    include:
+      - release/*
+
+pr: none  # No PR triggers for prod pipeline
+
+# Use prod-specific variable group
+variables:
+  - group: app-secrets-prod
+  - name: ENVIRONMENT
+    value: 'prod'
+  - name: dockerfilePath
+    value: "$(Build.SourcesDirectory)/Dockerfile"
+  - name: tag
+    value: "$(Build.BuildId)"
+  - name: AGENT_POOL
+    value: 'StaticAgentPool-prod'
+  - name: API_BASE_URL
+    value: 'https://api.copilotgtm.com/admin'
+
+stages:
+  # ==========================================================================
+  # Stage 1: Build & Push Docker Image to Prod ACR
+  # ==========================================================================
+  - stage: Build
+    displayName: "Build & Push (Prod)"
+    pool:
+      name: $(AGENT_POOL)
+    jobs:
+      - job: BuildAndPush
+        displayName: "Build and Push to Prod ACR"
+        steps:
+          - checkout: self
+
+          - script: |
+              echo "##[group]Build Configuration"
+              echo "Environment: $(ENVIRONMENT)"
+              echo "Branch: $(Build.SourceBranch)"
+              echo "Build ID: $(Build.BuildId)"
+              echo "Tag: $(tag)"
+              echo "ACR: $(ACR_LOGIN_SERVER)"
+              echo "##[endgroup]"
+              echo ""
+              echo "##[group]Environment URLs"
+              echo "API_BASE_URL: $(API_BASE_URL)"
+              echo "##[endgroup]"
+            displayName: "Echo Build Variables"
+
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "login"
+
+          - task: Docker@2
+            displayName: "Build and Push Docker Image"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "buildAndPush"
+              repository: "copilotgtm-frontend-admin-app"
+              Dockerfile: "$(dockerfilePath)"
+              buildContext: "$(Build.SourcesDirectory)"
+              tags: |
+                $(tag)
+                latest
+              arguments: "--build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
+
+          - script: |
+              echo "##[section]Build Complete!"
+              echo "Image: $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+            displayName: "Build Summary"
+
+  # ==========================================================================
+  # Stage 2: Deploy to Prod App Service (Requires Approval)
+  # ==========================================================================
+  - stage: Deploy
+    displayName: "Deploy (Prod)"
+    dependsOn: Build
+    condition: succeeded()
+    pool:
+      name: $(AGENT_POOL)
+    jobs:
+      - deployment: DeployWebApp
+        displayName: "Deploy to Prod App Service"
+        environment: 'terraform-prod'  # Uses approval gate configured in Azure DevOps
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    echo "##[group]Deploy Configuration"
+                    echo "Environment: $(ENVIRONMENT)"
+                    echo "Web App: $(ADMIN_WEB_APP_NAME)"
+                    echo "Resource Group: $(RESOURCE_GROUP)"
+                    echo "Image Tag: $(tag)"
+                    echo "##[endgroup]"
+                  displayName: "Echo Deploy Variables"
+
+                - task: AzureWebAppContainer@1
+                  displayName: "Deploy to Azure App Service"
+                  inputs:
+                    azureSubscription: $(AZURE_SUBSCRIPTION)
+                    appName: $(ADMIN_WEB_APP_NAME)
+                    resourceGroupName: $(RESOURCE_GROUP)
+                    containers: "$(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+
+                - script: |
+                    echo "##[section]Deployment Complete!"
+                    echo "App deployed to: $(ADMIN_WEB_APP_NAME)"
+                    echo "Environment: $(ENVIRONMENT)"
+                  displayName: "Deploy Summary"
