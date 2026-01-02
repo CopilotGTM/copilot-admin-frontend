@@ -211,7 +211,8 @@ stages:
   - stage: DeployProd
     displayName: "Deploy to Prod App Service"
     dependsOn: BuildAndPushProd
-    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'), ne(variables['Build.Reason'], 'PullRequest'))
+    # Deploy only if the prod build stage ran and succeeded. Build stage already gates release/* branches.
+    condition: and(succeeded('BuildAndPushProd'), ne(variables['Build.Reason'], 'PullRequest'))
     variables:
       - group: app-secrets-prod
       - name: DEPLOY_ENVIRONMENT
