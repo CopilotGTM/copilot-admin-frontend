@@ -1,10 +1,10 @@
 # 1) Builder stage
-FROM node:lts AS builder
+FROM node:20-bookworm AS builder
 
-# — build-time args (defaults)
-ARG NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com/admin
+# Build-time args (REQUIRED - must be passed via --build-arg)
+ARG NEXT_PUBLIC_API_BASE_URL
 
-# — make them available to Next.js at build time
+# Make them available to Next.js at build time
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 WORKDIR /app
@@ -18,12 +18,14 @@ RUN yarn build
 RUN yarn install --production --frozen-lockfile
 
 # 2) Runner stage
-FROM node:lts-alpine AS runner
+FROM node:20-bookworm-slim AS runner
 
-# runtime ENV
+# Runtime args (REQUIRED - must be passed via --build-arg)
+ARG NEXT_PUBLIC_API_BASE_URL
+
+# Runtime ENV (set from ARGs)
 ENV NODE_ENV=production
-ENV NEXT_PUBLIC_API_BASE_URL=https://devapi.copilotgtm.com/admin
-
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 WORKDIR /app
 
