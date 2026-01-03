@@ -1,0 +1,34 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing & Coverage
+/coverage
+/__tests__
+/test-results
+/playwright-report
+jest.config.ts
+playwright.config.ts
+
+# Build Output
+/.next
+/out
+/build
+
+# Version Control & IDE
+.git
+.gitignore
+.vscode
+.idea
+
+# Env Files & Logs
+.env*
+*.log
+
+# Documentation & CI Configs
+/docs
+/pipelines
+README.md
+CHANGELOG.md
+Dockerfile
