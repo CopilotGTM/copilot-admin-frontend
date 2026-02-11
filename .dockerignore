@@ -21,14 +21,35 @@ playwright.config.ts
 .gitignore
 .vscode
 .idea
+*.swp
+*.swo
 
-# Env Files & Logs
-.env*
+# Environment variables (secrets should be passed via build args)
+.env
+.env.*
+!.env.example
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Documentation & CI Configs
+# Documentation & CI/CD
 /docs
 /pipelines
 README.md
 CHANGELOG.md
+commitmsg.txt
+
+# Configs not needed in Docker build
+eslint.config.mjs
 Dockerfile
+.dockerignore
+.nvmrc
+.husky
+.prettierrc*
+.editorconfig
+
+# Dev tooling
+tsconfig.tsbuildinfo
