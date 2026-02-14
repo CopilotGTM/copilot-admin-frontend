@@ -1,0 +1,55 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing & Coverage
+/coverage
+/__tests__
+/test-results
+/playwright-report
+jest.config.ts
+playwright.config.ts
+
+# Build Output
+/.next
+/out
+/build
+
+# Version Control & IDE
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment variables (secrets should be passed via build args)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation & CI/CD
+/docs
+/pipelines
+README.md
+CHANGELOG.md
+commitmsg.txt
+
+# Configs not needed in Docker build
+eslint.config.mjs
+Dockerfile
+.dockerignore
+.nvmrc
+.husky
+.prettierrc*
+.editorconfig
+
+# Dev tooling
+tsconfig.tsbuildinfo
