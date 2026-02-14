@@ -3,7 +3,12 @@
 # ============================================================================
 # This pipeline handles DEV deployments only.
 # Triggers on: main, feature/*, hotfix/* branches
-# Deploys to: Dev App Service
+# Stages: SecurityGate -> Build -> Deploy
+#
+# Optimizations:
+# - BuildKit with docker buildx for registry-based cache (mode=max)
+# - All intermediate layers cached, not just final image layers
+# - Single build+push step (no separate docker push)
 # ============================================================================
 
 trigger:
@@ -29,15 +34,62 @@ variables:
     value: "$(Build.BuildId)"
   - name: AGENT_POOL
     value: 'StaticAgentPool'
+  - name: IMAGE_NAME
+    value: 'copilotgtm-frontend-admin-app'
+  # Enable BuildKit for better caching and parallel builds
+  - name: DOCKER_BUILDKIT
+    value: '1'
+  # Environment-specific URLs
   - name: API_BASE_URL
     value: 'https://devapi.copilotgtm.com/admin'
 
 stages:
   # ==========================================================================
+  # Stage 0: Security Gate (runs before build)
+  # ==========================================================================
+  - stage: SecurityGate
+    displayName: "Security Checks"
+    pool:
+      name: $(AGENT_POOL)
+    jobs:
+      - job: SecurityTests
+        displayName: "Run Security Tests & Audit"
+        steps:
+          # Clean up any root-owned files left by previous Docker-based runs
+          - script: |
+              docker run --rm -v "$(Build.SourcesDirectory):/ws" node:20-alpine sh -c "rm -rf /ws/node_modules /ws/coverage" 2>/dev/null || true
+            displayName: "Clean root-owned files"
+
+          - checkout: self
+
+          # Mount source read-only, copy inside container, run tests there.
+          # This avoids writing node_modules/coverage to the host filesystem
+          # which would cause permission errors on subsequent pipeline runs.
+          # Uses a persistent Docker volume for yarn cache to speed up installs.
+          - script: |
+              docker volume create yarn-cache-admin 2>/dev/null || true
+              docker run --rm \
+                -v "$(Build.SourcesDirectory):/src:ro" \
+                -v yarn-cache-admin:/usr/local/share/.cache/yarn \
+                node:20-alpine sh -c "
+                  cp -a /src /app && cd /app &&
+                  echo '##[section]Installing dependencies...' &&
+                  yarn install --frozen-lockfile --network-timeout 100000 &&
+                  echo '' &&
+                  echo '##[section]Running dependency audit...' &&
+                  (yarn audit --groups dependencies --level critical || true) &&
+                  echo '' &&
+                  echo '##[section]Running security test suite...' &&
+                  yarn test:security --ci --forceExit
+                "
+            displayName: "Security Tests & Dependency Audit"
+
+  # ==========================================================================
   # Stage 1: Build & Push Docker Image to Dev ACR
   # ==========================================================================
   - stage: Build
     displayName: "Build & Push (Dev)"
+    dependsOn: SecurityGate
     pool:
       name: $(AGENT_POOL)
     jobs:
@@ -53,6 +105,8 @@ stages:
               echo "Build ID: $(Build.BuildId)"
               echo "Tag: $(tag)"
               echo "ACR: $(ACR_LOGIN_SERVER)"
+              echo "Image: $(IMAGE_NAME)"
+              echo "BuildKit: $(DOCKER_BUILDKIT)"
               echo "##[endgroup]"
               echo ""
               echo "##[group]Environment URLs"
@@ -60,40 +114,53 @@ stages:
               echo "##[endgroup]"
             displayName: "Echo Build Variables"
 
+          # Login to ACR first (needed for cache pull and image push)
           - task: Docker@2
             displayName: "Login to ACR"
             inputs:
-              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "login"
+              command: login
+              containerRegistry: $(ACR_SERVICE_CONNECTION)
 
-          - task: Docker@2
-            displayName: "Build Docker Image"
-            inputs:
-              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "build"
-              repository: "copilotgtm-frontend-admin-app"
-              Dockerfile: "$(dockerfilePath)"
-              buildContext: "$(Build.SourcesDirectory)"
-              arguments: >
-                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
-              tags: |
-                $(tag)
-                latest
+          # Set up buildx builder with docker-container driver (supports registry cache)
+          - script: |
+              docker buildx create --name cibuilder --use --bootstrap 2>/dev/null || docker buildx use cibuilder
+              docker buildx inspect --bootstrap
+            displayName: "Setup Buildx Builder"
 
-          - task: Docker@2
-            displayName: "Push Docker Image"
-            inputs:
-              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "push"
-              repository: "copilotgtm-frontend-admin-app"
-              tags: |
-                $(tag)
-                latest
+          # Build and push in one step with registry-based cache
+          # mode=max caches ALL intermediate layers (not just final image layers)
+          - script: |
+              echo "Building with buildx and registry cache..."
+              docker buildx build \
+                --cache-from type=registry,ref=$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache \
+                --cache-to type=registry,ref=$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache,mode=max \
+                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)" \
+                -t $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag) \
+                -t $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):latest \
+                --push \
+                -f $(dockerfilePath) \
+                $(Build.SourcesDirectory)
+            displayName: "Build & Push Docker Image"
+            env:
+              DOCKER_BUILDKIT: 1
 
           - script: |
               echo "##[section]Build Complete!"
-              echo "Image: $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+              echo "Image: $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)"
+              echo "Cache image updated: $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache"
             displayName: "Build Summary"
+
+          # Pull the image back for container security testing
+          - script: |
+              echo "Pulling built image for security tests..."
+              docker pull $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)
+            displayName: "Pull Image for Security Tests"
+
+          # Run container hardening tests against the built image
+          - script: |
+              chmod +x $(Build.SourcesDirectory)/scripts/container-security-test.sh
+              $(Build.SourcesDirectory)/scripts/container-security-test.sh $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)
+            displayName: "Container Security Tests"
 
   # ==========================================================================
   # Stage 2: Deploy to Dev App Service
@@ -127,7 +194,7 @@ stages:
                     azureSubscription: $(AZURE_SUBSCRIPTION)
                     appName: $(ADMIN_WEB_APP_NAME)
                     resourceGroupName: $(RESOURCE_GROUP)
-                    containers: "$(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+                    containers: "$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)"
 
                 - script: |
                     echo "##[section]Deployment Complete!"
