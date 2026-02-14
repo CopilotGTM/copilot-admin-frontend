@@ -60,9 +60,12 @@ stages:
           # Mount source read-only, copy inside container, run tests there.
           # This avoids writing node_modules/coverage to the host filesystem
           # which would cause permission errors on subsequent pipeline runs.
+          # Uses a persistent Docker volume for yarn cache to speed up installs.
           - script: |
+              docker volume create yarn-cache-admin 2>/dev/null || true
               docker run --rm \
                 -v "$(Build.SourcesDirectory):/src:ro" \
+                -v yarn-cache-admin:/usr/local/share/.cache/yarn \
                 node:20-alpine sh -c "
                   cp -a /src /app && cd /app &&
                   echo '##[section]Installing dependencies...' &&
