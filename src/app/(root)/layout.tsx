@@ -3,6 +3,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import { QueryProvider } from "@/core/providers";
 import { CollapsibleSidebar } from "@/components/layout/sidebar";
 import { useState } from "react";
+import { useColorModeValue } from "@/components/ui/color-mode";
 
 export default function GTMRootLayout({
   children,
@@ -16,6 +17,8 @@ export default function GTMRootLayout({
   const mainSidebarWidth = isMainSidebarCollapsed ? 64 : 240;
   const totalSidebarWidth = mainSidebarWidth;
 
+  const bgColor = useColorModeValue("white", "gray.950");
+
   return (
     <QueryProvider>
       <Flex
@@ -24,7 +27,7 @@ export default function GTMRootLayout({
         w={"100vw"}
         gap={0}
         h={"100vh"}
-        bg={"white"}
+        bg={bgColor}
         overflow="hidden"
       >
         {/* Main navigation sidebar */}
