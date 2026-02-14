@@ -59,27 +59,35 @@ ENV HOSTNAME="0.0.0.0"
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 --shell /sbin/nologin nextjs
 
-# Copy public assets
+# ── Container hardening ─────────────────────────────────────────────────
+# 1. Remove package manager so attackers cannot install tools
+# 2. Remove network utilities (wget, curl) to prevent tool download & data exfil
+# 3. Remove system info files that reveal OS / version
+# 4. Remove shells except /sbin/nologin (needed for user validation)
+RUN apk --no-cache del apk-tools alpine-keys \
+    && rm -f /usr/bin/wget /usr/bin/curl \
+    && rm -f /etc/os-release /etc/alpine-release /etc/motd \
+    && rm -rf /var/cache/apk /tmp/* /root/.cache \
+    && rm -f /bin/sh /bin/ash /bin/bash 2>/dev/null; \
+    ln -sf /sbin/nologin /bin/sh
+
+# Copy public assets (owned by root = read-only to nextjs)
 COPY --from=builder /app/public ./public
 
-# Create .next directory with correct ownership for prerender cache
+# Only .next directory is writable by nextjs (prerender cache)
 RUN mkdir .next && chown nextjs:nodejs .next
 
 # Copy standalone build output
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Hardening: remove source maps, set read-only permissions, then remove tools/shells
-# IMPORTANT: This must be a single RUN — shell removal at the end prevents further RUN commands
-RUN find /app -name '*.map' -delete && \
-    find /app -not -path '/app/.next/*' -type f -exec chmod 444 {} + && \
-    find /app -not -path '/app/.next/*' -type d -exec chmod 555 {} + && \
-    apk del --purge apk-tools 2>/dev/null; \
-    rm -rf /sbin/apk /usr/sbin/apk /var/cache/apk /etc/apk /lib/apk; \
-    rm -f /usr/bin/wget /usr/bin/curl; \
-    rm -f /bin/sh /bin/ash /bin/bash 2>/dev/null; \
-    rm -f /etc/os-release /usr/lib/os-release; \
-    true
+# Make .next writable for ISR/prerender cache, everything else read-only
+RUN chown -R nextjs:nodejs /app/.next && \
+    find /app -not -path '/app/.next*' -type f -exec chmod 444 {} + && \
+    find /app -not -path '/app/.next*' -type d -exec chmod 555 {} +
+
+# Remove any .map source map files that may have leaked into standalone
+RUN find /app -name '*.map' -delete 2>/dev/null; true
 
 # Switch to non-root user
 USER nextjs
