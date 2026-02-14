@@ -3,7 +3,7 @@
 # ============================================================================
 # This pipeline handles DEV deployments only.
 # Triggers on: main, feature/*, hotfix/* branches
-# Deploys to: Dev App Service
+# Stages: SecurityGate -> Build -> Deploy
 # ============================================================================
 
 trigger:
@@ -31,13 +31,48 @@ variables:
     value: 'StaticAgentPool'
   - name: API_BASE_URL
     value: 'https://devapi.copilotgtm.com/admin'
+  - name: IMAGE_NAME
+    value: 'copilotgtm-frontend-admin-app'
+  - name: DOCKER_BUILDKIT
+    value: '1'
 
 stages:
   # ==========================================================================
-  # Stage 1: Build & Push Docker Image to Dev ACR
+  # Stage 1: Security Gate - Security Tests & Dependency Audit
+  # ==========================================================================
+  - stage: SecurityGate
+    displayName: "Security Gate"
+    pool:
+      name: $(AGENT_POOL)
+    jobs:
+      - job: SecurityTests
+        displayName: "Run Security Tests & Dependency Audit"
+        steps:
+          - checkout: self
+
+          - task: NodeTool@0
+            displayName: "Install Node.js"
+            inputs:
+              versionSpec: '20.x'
+
+          - script: |
+              yarn install --frozen-lockfile --network-timeout 100000
+            displayName: "Install Dependencies"
+
+          - script: |
+              yarn test:security --ci --forceExit
+            displayName: "Run Security Tests"
+
+          - script: |
+              echo "##[section]Security Gate Passed!"
+            displayName: "Security Gate Summary"
+
+  # ==========================================================================
+  # Stage 2: Build & Push Docker Image to Dev ACR (BuildKit + Registry Cache)
   # ==========================================================================
   - stage: Build
     displayName: "Build & Push (Dev)"
+    dependsOn: SecurityGate
     pool:
       name: $(AGENT_POOL)
     jobs:
@@ -53,6 +88,7 @@ stages:
               echo "Build ID: $(Build.BuildId)"
               echo "Tag: $(tag)"
               echo "ACR: $(ACR_LOGIN_SERVER)"
+              echo "Image: $(IMAGE_NAME)"
               echo "##[endgroup]"
               echo ""
               echo "##[group]Environment URLs"
@@ -66,37 +102,46 @@ stages:
               containerRegistry: "$(ACR_SERVICE_CONNECTION)"
               command: "login"
 
-          - task: Docker@2
-            displayName: "Build Docker Image"
-            inputs:
-              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "build"
-              repository: "copilotgtm-frontend-admin-app"
-              Dockerfile: "$(dockerfilePath)"
-              buildContext: "$(Build.SourcesDirectory)"
-              arguments: >
-                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
-              tags: |
-                $(tag)
-                latest
-
-          - task: Docker@2
-            displayName: "Push Docker Image"
-            inputs:
-              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "push"
-              repository: "copilotgtm-frontend-admin-app"
-              tags: |
-                $(tag)
-                latest
+          - script: |
+              docker buildx create --use --name pipeline-builder 2>/dev/null || docker buildx use pipeline-builder
+              docker buildx build \
+                --file "$(dockerfilePath)" \
+                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)" \
+                --cache-from type=registry,ref=$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache \
+                --cache-to type=registry,ref=$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache,mode=max \
+                --tag $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag) \
+                --tag $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):latest \
+                --push \
+                "$(Build.SourcesDirectory)"
+            displayName: "Build & Push with BuildKit (Registry Cache)"
+            env:
+              DOCKER_BUILDKIT: 1
 
           - script: |
               echo "##[section]Build Complete!"
-              echo "Image: $(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+              echo "Image: $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)"
             displayName: "Build Summary"
 
+      - job: ContainerSecurityTests
+        displayName: "Container Security Tests"
+        dependsOn: BuildAndPush
+        steps:
+          - checkout: self
+
+          - task: Docker@2
+            displayName: "Login to ACR"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "login"
+
+          - script: |
+              docker pull $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)
+              chmod +x scripts/container-security-test.sh
+              ./scripts/container-security-test.sh $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)
+            displayName: "Run Container Security Tests"
+
   # ==========================================================================
-  # Stage 2: Deploy to Dev App Service
+  # Stage 3: Deploy to Dev App Service
   # ==========================================================================
   - stage: Deploy
     displayName: "Deploy (Dev)"
@@ -127,7 +172,7 @@ stages:
                     azureSubscription: $(AZURE_SUBSCRIPTION)
                     appName: $(ADMIN_WEB_APP_NAME)
                     resourceGroupName: $(RESOURCE_GROUP)
-                    containers: "$(ACR_LOGIN_SERVER)/copilotgtm-frontend-admin-app:$(tag)"
+                    containers: "$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)"
 
                 - script: |
                     echo "##[section]Deployment Complete!"

@@ -38,6 +38,7 @@ yarn-error.log*
 # Documentation & CI/CD
 /docs
 /pipelines
+/scripts
 README.md
 CHANGELOG.md
 commitmsg.txt
