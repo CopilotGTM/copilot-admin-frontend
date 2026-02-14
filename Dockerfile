@@ -69,20 +69,17 @@ RUN mkdir .next && chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Remove source maps for security
-RUN find /app -name '*.map' -delete
-
-# Container hardening: remove unnecessary tools and shells
-RUN apk del --purge apk-tools 2>/dev/null; \
+# Hardening: remove source maps, set read-only permissions, then remove tools/shells
+# IMPORTANT: This must be a single RUN — shell removal at the end prevents further RUN commands
+RUN find /app -name '*.map' -delete && \
+    find /app -not -path '/app/.next/*' -type f -exec chmod 444 {} + && \
+    find /app -not -path '/app/.next/*' -type d -exec chmod 555 {} + && \
+    apk del --purge apk-tools 2>/dev/null; \
     rm -rf /sbin/apk /usr/sbin/apk /var/cache/apk /etc/apk /lib/apk; \
     rm -f /usr/bin/wget /usr/bin/curl; \
     rm -f /bin/sh /bin/ash /bin/bash 2>/dev/null; \
     rm -f /etc/os-release /usr/lib/os-release; \
     true
-
-# Set read-only file permissions (except .next for prerender cache)
-RUN find /app -not -path '/app/.next/*' -type f -exec chmod 444 {} + && \
-    find /app -not -path '/app/.next/*' -type d -exec chmod 555 {} +
 
 # Switch to non-root user
 USER nextjs
