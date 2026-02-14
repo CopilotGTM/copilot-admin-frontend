@@ -1,6 +1,7 @@
 import React from "react";
 import { IconButton, IconButtonProps } from "@chakra-ui/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useColorModeValue } from "@/components/ui/color-mode";
 
 interface SidebarCloseProps extends IconButtonProps {
   isCollapsed: boolean;
@@ -12,6 +13,9 @@ export function SidebarClose({
   onClick,
   ...rest
 }: Readonly<SidebarCloseProps>) {
+  const bg = useColorModeValue("white", "gray.800");
+  const chevronColor = useColorModeValue("gray.600", "gray.300");
+
   return (
     <IconButton
       onClick={onClick}
@@ -19,7 +23,7 @@ export function SidebarClose({
       position="absolute"
       right="-0.80rem"
       bottom="3"
-      bg="white"
+      bg={bg}
       size={"2xs"}
       variant={"outline"}
       rounded="md"
@@ -31,9 +35,9 @@ export function SidebarClose({
       {...rest}
     >
       {isCollapsed ? (
-        <ChevronRight color="black" />
+        <ChevronRight color={chevronColor} />
       ) : (
-        <ChevronLeft color="black" />
+        <ChevronLeft color={chevronColor} />
       )}
     </IconButton>
   );

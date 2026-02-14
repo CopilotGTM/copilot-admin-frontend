@@ -5,7 +5,6 @@ import {
   Box,
   Flex,
   Icon,
-  Text,
   Drawer,
   Portal,
   useDisclosure,
@@ -14,20 +13,21 @@ import {
   Separator,
   useBreakpointValue,
 } from "@chakra-ui/react";
-import { IconType } from "react-icons";
 
-import { useColorModeValue } from "@chakra-ui/system";
+import { useColorModeValue } from "@/components/ui/color-mode";
 import { SidebarClose } from "./sidebar-close";
-import { Bell, Building2, Home, Settings } from "lucide-react";
+import { Bell, Building2, Home, Settings, Users } from "lucide-react";
 import UserMenu from "./user-menu";
 import { Tooltip } from "@/components/ui/tooltip";
 import logo from "@/../public/logo.svg";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 interface LinkItemProps {
   name: string;
-  icon: IconType;
+  icon: React.ElementType;
+  href: string;
 }
 
 const ENABLE_NOTIFICATIONS =
@@ -35,12 +35,17 @@ const ENABLE_NOTIFICATIONS =
 const ENABLE_SETTINGS = process.env.NEXT_PUBLIC_ENABLE_SETTINGS !== "false";
 
 const mainLinkItems: Array<LinkItemProps> = [
-  { name: "Organizations", icon: Building2 }
+  { name: "Organizations", icon: Building2, href: "/organizations" },
+  { name: "Users", icon: Users, href: "/users" },
 ];
 
 const secondaryLinkItems: Array<LinkItemProps> = [
-  ...(ENABLE_NOTIFICATIONS ? [{ name: "Notifications", icon: Bell }] : []),
-  ...(ENABLE_SETTINGS ? [{ name: "Settings", icon: Settings }] : []),
+  ...(ENABLE_NOTIFICATIONS
+    ? [{ name: "Notifications", icon: Bell, href: "/notifications" }]
+    : []),
+  ...(ENABLE_SETTINGS
+    ? [{ name: "Settings", icon: Settings, href: "/settings" }]
+    : []),
 ];
 
 export interface CollapsibleSidebarProps {
@@ -99,6 +104,9 @@ const SidebarContent = ({
   onToggleCollapse,
   ...rest
 }: SidebarProps) => {
+  const pathname = usePathname();
+  const router = useRouter();
+
   return (
     <Box
       bg={useColorModeValue("white", "gray.900")}
@@ -139,15 +147,15 @@ const SidebarContent = ({
               <Image src={logo} alt="Copilot-GTM logo" />
               {!isCollapsed && (
                 <Flex alignItems="center" gap={2}>
-                  <Icon as={Home} fontSize="18" color="rgba(140, 86, 176, 1)" />
-                  <Text
+                  <Icon as={Home} fontSize="24" color="rgba(140, 86, 176, 1)" />
+                  <Box
                     fontSize="md"
                     fontWeight="medium"
                     lineHeight={"24px"}
                     color="rgba(140, 86, 176, 1)"
                   >
                     CoPilotGTM
-                  </Text>
+                  </Box>
                 </Flex>
               )}
             </Link>
@@ -163,6 +171,11 @@ const SidebarContent = ({
                 key={link.name}
                 icon={link.icon}
                 isCollapsed={isCollapsed}
+                isActive={
+                  pathname === link.href ||
+                  pathname?.startsWith(link.href + "/")
+                }
+                onClick={() => router.push(link.href)}
               >
                 {link.name}
               </NavItem>
@@ -181,6 +194,11 @@ const SidebarContent = ({
                 key={link.name}
                 icon={link.icon}
                 isCollapsed={isCollapsed}
+                isActive={
+                  pathname === link.href ||
+                  pathname?.startsWith(link.href + "/")
+                }
+                onClick={() => router.push(link.href)}
               >
                 {link.name}
               </NavItem>
@@ -198,18 +216,34 @@ const SidebarContent = ({
 };
 
 interface NavItemProps extends FlexProps {
-  icon: IconType;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  children: any;
+  icon: React.ElementType;
+  children: React.ReactNode;
   isCollapsed: boolean;
+  isActive?: boolean;
+  onClick?: () => void;
 }
 
-const NavItem = ({ icon, children, isCollapsed, ...rest }: NavItemProps) => {
+const NavItem = ({
+  icon,
+  children,
+  isCollapsed,
+  isActive,
+  onClick,
+  ...rest
+}: NavItemProps) => {
+  const activeBg = useColorModeValue("purple.50", "purple.900");
+  const activeColor = useColorModeValue("purple.700", "purple.200");
+  const inactiveColor = useColorModeValue("gray.600", "gray.400");
+  const hoverBg = useColorModeValue("gray.100", "gray.800");
+  const activeHoverBg = useColorModeValue("purple.100", "purple.800");
+
   return (
     <Box
       as="a"
       style={{ textDecoration: "none" }}
       _focus={{ boxShadow: "none" }}
+      onClick={onClick}
+      cursor="pointer"
     >
       <Flex
         align="center"
@@ -218,32 +252,31 @@ const NavItem = ({ icon, children, isCollapsed, ...rest }: NavItemProps) => {
         mx={isCollapsed ? 2 : 4}
         borderRadius="lg"
         cursor="pointer"
+        bg={isActive ? activeBg : "transparent"}
+        color={isActive ? activeColor : inactiveColor}
+        fontWeight={isActive ? "semibold" : "normal"}
         _hover={{
-          bg: "purple.100",
-          color: "purple.700",
+          bg: isActive ? activeHoverBg : hoverBg,
         }}
         {...rest}
       >
         {icon && (
           <Icon
             mr={isCollapsed ? 0 : 4}
-            fontSize="18"
-            color={"gray.600"}
-            _groupHover={{
-              color: "gray.500",
-            }}
+            fontSize="24"
+            color="currentColor"
             as={icon}
           />
         )}
         {!isCollapsed && (
-          <Text
+          <Box
             fontSize="md"
-            fontWeight="normal"
+            fontWeight="inherit"
             lineHeight={"24px"}
-            color={"gray.600"}
+            color="currentColor"
           >
             {children}
-          </Text>
+          </Box>
         )}
       </Flex>
     </Box>
