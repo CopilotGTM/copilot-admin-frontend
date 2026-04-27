@@ -85,17 +85,28 @@ stages:
               command: "login"
 
           - task: Docker@2
-            displayName: "Build and Push Docker Image"
+            displayName: "Build Docker Image"
             inputs:
               containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "buildAndPush"
+              command: "build"
               repository: "copilotgtm-frontend-admin-app"
               Dockerfile: "$(dockerfilePath)"
               buildContext: "$(Build.SourcesDirectory)"
+              arguments: >
+                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
               tags: |
                 $(tag)
                 latest
-              arguments: "--build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
+
+          - task: Docker@2
+            displayName: "Push Docker Image"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "push"
+              repository: "copilotgtm-frontend-admin-app"
+              tags: |
+                $(tag)
+                latest
 
           - script: |
               echo "##[section]Build Complete!"
@@ -141,17 +152,28 @@ stages:
               command: "login"
 
           - task: Docker@2
-            displayName: "Build and Push Docker Image"
+            displayName: "Build Docker Image"
             inputs:
               containerRegistry: "$(ACR_SERVICE_CONNECTION)"
-              command: "buildAndPush"
+              command: "build"
               repository: "copilotgtm-frontend-admin-app"
               Dockerfile: "$(dockerfilePath)"
               buildContext: "$(Build.SourcesDirectory)"
+              arguments: >
+                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
               tags: |
                 $(tag)
                 latest
-              arguments: "--build-arg NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)"
+
+          - task: Docker@2
+            displayName: "Push Docker Image"
+            inputs:
+              containerRegistry: "$(ACR_SERVICE_CONNECTION)"
+              command: "push"
+              repository: "copilotgtm-frontend-admin-app"
+              tags: |
+                $(tag)
+                latest
 
           - script: |
               echo "##[section]Build Complete!"
