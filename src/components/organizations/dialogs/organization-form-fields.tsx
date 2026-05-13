@@ -54,7 +54,7 @@ function FieldShell({
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-surface-primary p-4">
+    <section className="rounded-lg border border-border-emphasized bg-surface-secondary p-4 shadow-xs">
       <h3 className="mb-4 text-sm font-semibold text-fg-primary">{title}</h3>
       {children}
     </section>

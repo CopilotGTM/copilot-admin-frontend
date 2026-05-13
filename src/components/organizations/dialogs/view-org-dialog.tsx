@@ -43,7 +43,7 @@ function formatDate(value?: string): string {
 function DetailItem({ label, value, className }: { label: string; value?: React.ReactNode; className?: string }) {
   return (
     <div className={className}>
-      <div className="flex min-h-18 flex-col gap-1 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+      <div className="flex min-h-18 flex-col gap-1 rounded-md border border-border-emphasized bg-surface-secondary px-3 py-2.5 shadow-xs">
         <span className="text-xs font-semibold uppercase text-fg-muted">{label}</span>
         <span className="break-words text-sm font-medium text-fg-primary">{value || "-"}</span>
       </div>
@@ -116,7 +116,7 @@ export default function ViewOrgDialog({ trigger, org }: Readonly<ViewOrgDialogPr
             <DetailItem label="Summary" value={<span className="whitespace-pre-wrap">{org.summary || "-"}</span>} className="md:col-span-2" />
 
             <div className="md:col-span-2">
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+              <div className="flex flex-col gap-2 rounded-md border border-border-emphasized bg-surface-secondary px-3 py-2.5 shadow-xs">
                 <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-fg-muted">
                   <ImageIcon /> Logo
                 </span>
