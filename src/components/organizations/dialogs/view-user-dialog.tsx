@@ -37,7 +37,7 @@ const adminStatusVariant: Record<AdminUserStatus, BadgeVariant> = {
 
 function DetailItem({ label, value }: { label: string; value?: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+    <div className="flex flex-col gap-1 rounded-md border border-border-emphasized bg-surface-secondary px-3 py-2.5 shadow-xs">
       <span className="text-xs font-semibold uppercase text-fg-muted">{label}</span>
       <span className="text-sm font-medium text-fg-primary">{value || "-"}</span>
     </div>
@@ -61,7 +61,7 @@ export default function ViewUserDialog({ trigger, user }: Readonly<ViewUserDialo
           <DetailItem label="Role" value={user.organisation_role} />
           <DetailItem label="Job title" value={user.job_title} />
           <div className="md:col-span-2">
-            <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+            <div className="flex flex-col gap-2 rounded-md border border-border-emphasized bg-surface-secondary px-3 py-2.5 shadow-xs">
               <span className="text-xs font-semibold uppercase text-fg-muted">Status</span>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={supabaseStatusVariant[user.status]} className="capitalize">{user.status}</Badge>
