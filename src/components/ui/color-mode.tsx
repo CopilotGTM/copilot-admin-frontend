@@ -1,34 +1,21 @@
 "use client";
 
-import type { IconButtonProps, SpanProps } from "@chakra-ui/react";
-import { ClientOnly, IconButton, Skeleton, Span } from "@chakra-ui/react";
-import { ThemeProvider, useTheme } from "next-themes";
-import type { ThemeProviderProps } from "next-themes";
 import * as React from "react";
-import { LuMoon, LuSun } from "react-icons/lu";
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ColorModeProviderProps extends ThemeProviderProps {}
-
-export function ColorModeProvider(props: ColorModeProviderProps) {
-  const { children, ...rest } = props;
-  const [mounted, setMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Keep server + initial client render identical to avoid hydration mismatch.
-  if (!mounted) return <>{children}</>;
-
-  return (
-    <ThemeProvider attribute="class" disableTransitionOnChange {...rest}>
-      {children}
-    </ThemeProvider>
-  );
-}
+import { Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export type ColorMode = "light" | "dark";
+
+export interface ColorModeProviderProps {
+  children: React.ReactNode;
+  defaultTheme?: ColorMode;
+  enableSystem?: boolean;
+  forcedTheme?: ColorMode;
+  attribute?: string;
+  disableTransitionOnChange?: boolean;
+}
 
 export interface UseColorModeReturn {
   colorMode: ColorMode;
@@ -36,15 +23,45 @@ export interface UseColorModeReturn {
   toggleColorMode: () => void;
 }
 
+const ColorModeContext = React.createContext<UseColorModeReturn | null>(null);
+
+export function ColorModeProvider({ children, defaultTheme = "light", forcedTheme }: ColorModeProviderProps) {
+  const [colorMode, setColorModeState] = React.useState<ColorMode>(forcedTheme ?? defaultTheme);
+
+  const setColorMode = React.useCallback(
+    (nextColorMode: ColorMode) => {
+      if (forcedTheme) return;
+      setColorModeState(nextColorMode);
+    },
+    [forcedTheme],
+  );
+
+  React.useEffect(() => {
+    const nextColorMode = forcedTheme ?? colorMode;
+    document.documentElement.classList.toggle("dark", nextColorMode === "dark");
+    document.documentElement.dataset.theme = nextColorMode;
+  }, [colorMode, forcedTheme]);
+
+  const value = React.useMemo<UseColorModeReturn>(() => {
+    const resolvedColorMode = forcedTheme ?? colorMode;
+    return {
+      colorMode: resolvedColorMode,
+      setColorMode,
+      toggleColorMode: () => setColorMode(resolvedColorMode === "dark" ? "light" : "dark"),
+    };
+  }, [colorMode, forcedTheme, setColorMode]);
+
+  return <ColorModeContext.Provider value={value}>{children}</ColorModeContext.Provider>;
+}
+
 export function useColorMode(): UseColorModeReturn {
-  const { resolvedTheme, setTheme } = useTheme();
-  const toggleColorMode = () => {
-    setTheme(resolvedTheme === "dark" ? "light" : "dark");
-  };
+  const context = React.useContext(ColorModeContext);
+  if (context) return context;
+
   return {
-    colorMode: resolvedTheme as ColorMode,
-    setColorMode: setTheme,
-    toggleColorMode,
+    colorMode: "light",
+    setColorMode: () => undefined,
+    toggleColorMode: () => undefined,
   };
 }
 
@@ -55,67 +72,48 @@ export function useColorModeValue<T>(light: T, dark: T) {
 
 export function ColorModeIcon() {
   const { colorMode } = useColorMode();
-  return colorMode === "dark" ? <LuMoon /> : <LuSun />;
+  return colorMode === "dark" ? <Moon /> : <Sun />;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-interface ColorModeButtonProps extends Omit<IconButtonProps, "aria-label"> {}
-
-export const ColorModeButton = React.forwardRef<
-  HTMLButtonElement,
-  ColorModeButtonProps
->(function ColorModeButton(props, ref) {
+export const ColorModeButton = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(function ColorModeButton(
+  { className, ...props },
+  ref,
+) {
   const { toggleColorMode } = useColorMode();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return <Skeleton className="size-8" />;
+
   return (
-    <ClientOnly fallback={<Skeleton boxSize="8" />}>
-      <IconButton
-        onClick={toggleColorMode}
-        variant="ghost"
-        aria-label="Toggle color mode"
-        size="sm"
-        ref={ref}
-        {...props}
-        css={{
-          _icon: {
-            width: "5",
-            height: "5",
-          },
-        }}
-      >
-        <ColorModeIcon />
-      </IconButton>
-    </ClientOnly>
+    <Button
+      type="button"
+      onClick={toggleColorMode}
+      variant="ghost"
+      aria-label="Toggle color mode"
+      size="icon-sm"
+      ref={ref}
+      className={className}
+      {...props}
+    >
+      <ColorModeIcon />
+    </Button>
   );
 });
 
-export const LightMode = React.forwardRef<HTMLSpanElement, SpanProps>(
-  function LightMode(props, ref) {
-    return (
-      <Span
-        color="fg"
-        display="contents"
-        className="chakra-theme light"
-        colorPalette="gray"
-        colorScheme="light"
-        ref={ref}
-        {...props}
-      />
-    );
-  },
-);
+export const LightMode = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function LightMode(
+  { className, ...props },
+  ref,
+) {
+  return <span ref={ref} className={cn("contents", className)} data-theme="light" {...props} />;
+});
 
-export const DarkMode = React.forwardRef<HTMLSpanElement, SpanProps>(
-  function DarkMode(props, ref) {
-    return (
-      <Span
-        color="fg"
-        display="contents"
-        className="chakra-theme dark"
-        colorPalette="gray"
-        colorScheme="dark"
-        ref={ref}
-        {...props}
-      />
-    );
-  },
-);
+export const DarkMode = React.forwardRef<HTMLSpanElement, React.ComponentProps<"span">>(function DarkMode(
+  { className, ...props },
+  ref,
+) {
+  return <span ref={ref} className={cn("contents dark", className)} data-theme="dark" {...props} />;
+});

@@ -1,4 +1,3 @@
-import { Heading, Text, Table, List, Box, Link } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -11,104 +10,28 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        // Headings
-        h1: ({ children }) => (
-          <Heading as="h1" size="xl" wordBreak="break-word">
-            {children}
-          </Heading>
-        ),
-        h2: ({ children }) => (
-          <Heading as="h2" size="lg" wordBreak="break-word">
-            {children}
-          </Heading>
-        ),
-        h3: ({ children }) => (
-          <Heading as="h3" size="md" wordBreak="break-word">
-            {children}
-          </Heading>
-        ),
-        // Paragraphs
-        p: ({ children }) => (
-          <Text fontSize="sm" wordBreak="break-word">
-            {children}
-          </Text>
-        ),
-        // Lists
-        ul: ({ children }) => (
-          <List.Root fontSize={"sm"} as="ul" pl={4} w={"100%"}>
-            {children}
-          </List.Root>
-        ),
-        ol: ({ children }) => (
-          <List.Root fontSize={"sm"} as="ol" pl={4} w={"100%"}>
-            {children}
-          </List.Root>
-        ),
-        li: ({ children }) => (
-          <List.Item wordBreak="break-word">{children}</List.Item>
-        ),
-        // Tables
-        table: ({ children }) => (
-          <Table.Root
-            size="sm"
-            variant="outline"
-            colorScheme="gray"
-            rounded="md"
-            showColumnBorder
-          >
-            {children}
-          </Table.Root>
-        ),
-        thead: ({ children }) => <Table.Header>{children}</Table.Header>,
-        tbody: ({ children }) => <Table.Body>{children}</Table.Body>,
-        tr: ({ children }) => <Table.Row>{children}</Table.Row>,
-        th: ({ children }) => (
-          <Table.ColumnHeader
-            border="1px"
-            borderColor="gray.200"
-            p={2}
-            wordBreak="break-word"
-          >
-            {children}
-          </Table.ColumnHeader>
-        ),
-        td: ({ children }) => (
-          <Table.Cell
-            border="1px"
-            borderColor="gray.200"
-            p={2}
-            wordBreak="break-word"
-          >
-            {children}
-          </Table.Cell>
-        ),
-
-        // Code blocks
+        h1: ({ children }) => <h1 className="break-words text-2xl font-semibold text-fg-primary">{children}</h1>,
+        h2: ({ children }) => <h2 className="break-words text-xl font-semibold text-fg-primary">{children}</h2>,
+        h3: ({ children }) => <h3 className="break-words text-lg font-semibold text-fg-primary">{children}</h3>,
+        p: ({ children }) => <p className="break-words text-sm text-fg-secondary">{children}</p>,
+        ul: ({ children }) => <ul className="w-full list-disc pl-4 text-sm text-fg-secondary">{children}</ul>,
+        ol: ({ children }) => <ol className="w-full list-decimal pl-4 text-sm text-fg-secondary">{children}</ol>,
+        li: ({ children }) => <li className="break-words">{children}</li>,
+        table: ({ children }) => <table className="w-full border-collapse text-sm">{children}</table>,
+        thead: ({ children }) => <thead className="bg-surface-secondary/70">{children}</thead>,
+        tbody: ({ children }) => <tbody>{children}</tbody>,
+        tr: ({ children }) => <tr className="border-b border-border">{children}</tr>,
+        th: ({ children }) => <th className="border border-border px-2 py-1 text-left font-semibold text-fg-primary">{children}</th>,
+        td: ({ children }) => <td className="break-words border border-border px-2 py-1 text-fg-secondary">{children}</td>,
         code: ({ children }) => (
-          <Box
-            as="code"
-            whiteSpace="pre-wrap"
-            wordBreak="break-word"
-            display="block"
-            p={2}
-            bg="gray.50"
-            rounded="md"
-            overflowX="auto"
-          >
+          <code className="block overflow-x-auto whitespace-pre-wrap break-words rounded-md bg-surface-secondary p-2 text-sm text-fg-primary">
             {children}
-          </Box>
+          </code>
         ),
-
         a: ({ href, children, ...props }) => (
-          <Link
-            href={href}
-            textDecoration={"underline"}
-            target="_blank"
-            wordBreak="break-word"
-            {...props}
-          >
+          <a href={href} target="_blank" rel="noopener noreferrer" className="break-words text-brand-primary underline underline-offset-2" {...props}>
             {children}
-          </Link>
+          </a>
         ),
       }}
     >

@@ -1,73 +1,48 @@
 "use client";
 
-import {
-  FormControl,
-  FormErrorMessage,
-  FormLabel,
-} from "@chakra-ui/form-control";
-import {
-  Flex,
-  Box,
-  Input,
-  Stack,
-  Button,
-  Heading,
-  Text,
-  Image,
-  InputGroup,
-  Icon,
-  Link,
-  Center,
-  Alert,
-} from "@chakra-ui/react";
-import { Mail, MoveLeft } from "lucide-react";
-import { useForm } from "react-hook-form";
-import {
-  forgotPasswordSchema,
-  type ForgotPasswordInput,
-} from "@/modules/auth/schemas";
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { forgotPassword as sendResetPasswordLink } from "@/modules/auth/api";
+import { CheckCircle2, Mail, MoveLeft, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
-
+import { useForm } from "react-hook-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { forgotPassword as sendResetPasswordLink } from "@/modules/auth/api";
+import { forgotPasswordSchema, type ForgotPasswordInput } from "@/modules/auth/schemas";
 export function ForgotPasswordCard() {
   const [alertState, setAlertState] = useState<
     | { status: "success" | "error"; title: string; description?: string }
     | null
   >(null);
 
-  // Initialize React Hook Form with Zod schema
   const {
-    register: forgetPassword,
+    register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
     reset,
   } = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
-    mode: "onChange", // Validate on blur and submit
-    defaultValues: {
-      email: "",
-    },
+    mode: "onChange",
+    defaultValues: { email: "" },
   });
 
-  const forgetPasswordMutation = useMutation({
+  const forgotPasswordMutation = useMutation({
     mutationFn: sendResetPasswordLink,
-    onSuccess: (data) => {
-      console.log("@@@@@@data", data);
+    onSuccess: () => {
       setAlertState({
         status: "success",
-        title: "Reset link sent successfully!",
-        description:
-          "Please check your email inbox. If you don't see it, check your spam/junk folder.",
+        title: "Reset link sent successfully",
+        description: "Please check your email inbox. If you do not see it, check your spam or junk folder.",
       });
       reset({ email: "" });
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
-      console.error("Reset password error:", error);
-      const message =
-        error?.response?.data?.message || error?.message || "Something went wrong";
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Something went wrong";
       setAlertState({
         status: "error",
         title: "Failed to send reset link",
@@ -76,140 +51,63 @@ export function ForgotPasswordCard() {
     },
   });
 
-  // Handle form submission
-  const onSubmit = async (data: ForgotPasswordInput) => {
+  const onSubmit = (data: ForgotPasswordInput) => {
     setAlertState(null);
-    forgetPasswordMutation.mutate(data);
+    forgotPasswordMutation.mutate(data);
   };
 
   return (
-    <Flex minH={"100vh"} align={"center"} justify={"center"} bg={"white"}>
-      <Stack gap={8} mx={"auto"} maxW={"lg"} py={12} px={6}>
-        <Box
-          w={"md"}
-          rounded={"xl"}
-          bg={"white"}
-          boxShadow={"md"}
-          blur={"md"}
-          p={8}
-        >
-          <Stack align={"center"}>
-            <Image src="./ic-lock.svg" alt="Forget password icon" />
-            <Heading
-              fontSize={"2xl"}
-              fontWeight={"semibold"}
-              color={"gray.800"}
-              lineHeight={"tall"}
-            >
-              Forgot Password?
-            </Heading>
-            <Text fontSize={"sm"} fontWeight={"medium"} color={"gray.500"}>
-              No worries, we&apos;ll send you reset instructions.
-            </Text>
-          </Stack>
-          <Stack gap={12} mt={8}>
-            <FormControl display="flex" flexDirection="column" gap={4}>
-              <FormLabel fontSize="sm" fontWeight="medium" color="gray.600">
-                Email
-              </FormLabel>
-              <InputGroup
-                startElement={
-                  <Button disabled variant={"ghost"} w={"48px"} h={"48px"}>
-                    <Icon as={Mail} color="gray.400" size={"md"} />
-                  </Button>
-                }
-              >
-                <Input
-                  size={"lg"}
-                  variant={"outline"}
-                  type="email"
-                  borderRadius={6}
-                  height={"48px"}
-                  pr={"16px"}
-                  placeholder="Enter your email"
-                  _placeholder={{
-                    fontSize: "md",
-                    fontWeight: "normal",
-                    color: "gray.400",
-                  }}
-                  {...forgetPassword("email")}
-                />
-              </InputGroup>
-              {errors.email && (
-                <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
-              )}
-            </FormControl>
+    <main className="grid min-h-dvh place-items-center bg-surface-secondary px-4 py-10">
+      <div className="flex w-full max-w-md flex-col gap-5">
+        <Card className="border-border bg-surface-primary shadow-card-elevated">
+          <CardContent className="px-8 py-9">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Image src="/ic-lock.svg" alt="Password reset" width={64} height={64} className="size-16" />
+              <div className="mt-2 flex flex-col gap-1">
+                <h1 className="text-2xl font-semibold text-fg-primary">Forgot Password?</h1>
+                <p className="text-sm font-medium text-fg-muted">No worries, we will send you reset instructions.</p>
+              </div>
+            </div>
 
-            <Stack gap={4}>
-              <Button
-                bg="purple.600"
-                height="48px"
-                borderRadius="6px"
-                fontSize="lg"
-                fontWeight="semibold"
-                color="white"
-                _hover={{ bg: "purple.500" }}
-                onClick={handleSubmit(onSubmit)}
-                loading={isSubmitting || forgetPasswordMutation.isPending}
-                disabled={
-                  !isValid || isSubmitting || forgetPasswordMutation.isPending
-                }
-                loadingText="Sending Email..."
-                spinnerPlacement="end"
-              >
+            <form className="mt-8 flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
+              <label className="flex flex-col gap-2 text-sm font-medium text-fg-secondary">
+                Email
+                <span className="relative block">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
+                  <Input
+                    className="h-12 pl-10"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Enter your email"
+                    aria-invalid={!!errors.email}
+                    {...register("email")}
+                  />
+                </span>
+                {errors.email ? <span className="text-xs font-normal text-signal-risk">{errors.email.message}</span> : null}
+              </label>
+
+              <Button type="submit" className="h-12 text-base" disabled={!isValid || isSubmitting || forgotPasswordMutation.isPending}>
+                {isSubmitting || forgotPasswordMutation.isPending ? <Spinner data-icon="inline-start" size="sm" /> : null}
                 Reset Password
               </Button>
 
-              <Center>
-                <Link
-                  href="/signin"
-                  fontSize="lg"
-                  fontWeight="semibold"
-                  color="purple.600"
-                  gap={2}
-                  display="inline-flex"
-                  alignItems="center"
-                  _hover={{
-                    opacity: 0.8,
-                    textDecoration: "none",
-                  }}
-                  _focus={{
-                    outline: "none",
-                  }}
-                  _active={{
-                    outline: "none",
-                  }}
-                >
-                  <Icon as={MoveLeft} boxSize={6} strokeWidth={2} />
-                  Back to Sign in
-                </Link>
-              </Center>
-            </Stack>
-          </Stack>
-        </Box>
+              <Link className="mx-auto inline-flex items-center gap-2 text-sm font-semibold text-brand-primary hover:text-brand-hover" href="/signin">
+                <MoveLeft data-icon="inline-start" />
+                Back to Sign in
+              </Link>
+            </form>
+          </CardContent>
+        </Card>
 
-        {/* Alert below the card for success or error */}
-        {alertState && (
-          <Alert.Root
-            status={alertState.status}
-            bg={alertState.status === "success" ? "green.50" : "red.50"}
-            border={"1px solid"}
-            borderColor={alertState.status === "success" ? "green.200" : "red.200"}
-            w={"md"}
-            rounded={"lg"}
-            p={6}
-          >
-            <Alert.Indicator />
-            <Stack gap={1}>
-              <Alert.Title>{alertState.title}</Alert.Title>
-              {alertState.description && (
-                <Alert.Description>{alertState.description}</Alert.Description>
-              )}
-            </Stack>
-          </Alert.Root>
-        )}
-      </Stack>
-    </Flex>
+        {alertState ? (
+          <Alert variant={alertState.status === "error" ? "destructive" : "default"} className={alertState.status === "success" ? "border-signal-success/20 bg-signal-success/10 text-signal-success" : undefined}>
+            {alertState.status === "success" ? <CheckCircle2 data-icon="inline-start" /> : <XCircle data-icon="inline-start" />}
+            <AlertTitle>{alertState.title}</AlertTitle>
+            {alertState.description ? <AlertDescription>{alertState.description}</AlertDescription> : null}
+          </Alert>
+        ) : null}
+      </div>
+    </main>
   );
 }
 

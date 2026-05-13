@@ -1,13 +1,25 @@
 "use client";
 
 import React from "react";
-import { Button, CloseButton, Dialog, Portal, Input, Box, Separator, InputGroup, Icon } from "@chakra-ui/react";
-import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Briefcase, IdCard, User as UserIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { User as UserIcon, Briefcase, IdCard } from "lucide-react";
-import type { UserListItem, UpdateUserDetailsRequest } from "@/modules/users/types";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import type { UpdateUserDetailsRequest, UserListItem } from "@/modules/users/types";
 
 const editUserSchema = z.object({
   first_name: z.string().min(1),
@@ -24,11 +36,25 @@ export interface EditUserDialogProps {
   onUpdate: (user_id: string, payload: UpdateUserDetailsRequest) => Promise<void>;
 }
 
+function Field({ label, icon: Icon, error, children }: { label: string; icon: React.ElementType; error?: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-2 text-sm font-medium text-fg-secondary">
+      {label}
+      <span className="relative block">
+        <Icon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
+        {children}
+      </span>
+      {error ? <span className="text-xs font-normal text-destructive">{error}</span> : null}
+    </label>
+  );
+}
+
 export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<EditUserDialogProps>) {
+  const [open, setOpen] = React.useState(false);
   const {
     register,
     handleSubmit,
-    formState: { isSubmitting, isValid },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<EditUserInput>({
     resolver: zodResolver(editUserSchema),
     mode: "onChange",
@@ -40,74 +66,48 @@ export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<Edi
     },
   });
 
+  const onSubmit = handleSubmit(async (values) => {
+    await onUpdate(user.user_id, values);
+    setOpen(false);
+  });
+
   return (
-    <Dialog.Root placement="center" scrollBehavior="inside" size={"md"}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content p={6} rounded="xl" boxShadow="lg">
-            <Dialog.CloseTrigger asChild>
-              <CloseButton position="absolute" top="8px" right="8px" rounded="full" />
-            </Dialog.CloseTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="gap-0 p-0 sm:max-w-2xl">
+        <DialogHeader className="px-6 py-5">
+          <DialogTitle>Edit user</DialogTitle>
+          <DialogDescription>Update the user&apos;s profile and organization role metadata.</DialogDescription>
+        </DialogHeader>
+        <Separator />
 
-            <Dialog.Header>
-              <Dialog.Title fontSize="lg" fontWeight="bold">Edit user</Dialog.Title>
-            </Dialog.Header>
+        <form onSubmit={onSubmit}>
+          <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+            <Field label="First name" icon={UserIcon} error={errors.first_name?.message}>
+              <Input className="pl-10" placeholder="Alice" aria-invalid={!!errors.first_name} {...register("first_name")} />
+            </Field>
+            <Field label="Last name" icon={UserIcon} error={errors.last_name?.message}>
+              <Input className="pl-10" placeholder="Doe" aria-invalid={!!errors.last_name} {...register("last_name")} />
+            </Field>
+            <Field label="Job title" icon={Briefcase} error={errors.job_title?.message}>
+              <Input className="pl-10" placeholder="Product Manager" aria-invalid={!!errors.job_title} {...register("job_title")} />
+            </Field>
+            <Field label="Organization role" icon={IdCard} error={errors.organisation_role?.message}>
+              <Input className="pl-10" placeholder="Project Owner" aria-invalid={!!errors.organisation_role} {...register("organisation_role")} />
+            </Field>
+          </div>
 
-            <Separator />
-
-            <Dialog.Body>
-              <form
-                onSubmit={handleSubmit(async (values) => {
-                  await onUpdate(user.user_id, values);
-                })}
-              >
-                <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-                  <FormControl isRequired>
-                    <FormLabel>First name</FormLabel>
-                    <InputGroup startElement={<Button disabled variant="ghost" w="48px" h="48px"><Icon as={UserIcon} color="gray.400" /></Button>}>
-                      <Input rounded="md" placeholder="Alice" {...register("first_name")} />
-                    </InputGroup>
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel>Last name</FormLabel>
-                    <InputGroup startElement={<Button disabled variant="ghost" w="48px" h="48px"><Icon as={UserIcon} color="gray.400" /></Button>}>
-                      <Input rounded="md" placeholder="Doe" {...register("last_name")} />
-                    </InputGroup>
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel>Job title</FormLabel>
-                    <InputGroup startElement={<Button disabled variant="ghost" w="48px" h="48px"><Icon as={Briefcase} color="gray.400" /></Button>}>
-                      <Input rounded="md" placeholder="Product Manager" {...register("job_title")} />
-                    </InputGroup>
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel>Organization role</FormLabel>
-                    <InputGroup startElement={<Button disabled variant="ghost" w="48px" h="48px"><Icon as={IdCard} color="gray.400" /></Button>}>
-                      <Input rounded="md" placeholder="Project Owner" {...register("organisation_role")} />
-                    </InputGroup>
-                  </FormControl>
-                </Box>
-
-                <Separator my={4} />
-
-                <Dialog.Footer>
-                  <Dialog.ActionTrigger asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </Dialog.ActionTrigger>
-                  <Button type="submit" bg="purple.600" color="white" _hover={{ bg: "purple.500" }} disabled={!isValid} loading={isSubmitting}>
-                    Save changes
-                  </Button>
-                </Dialog.Footer>
-              </form>
-            </Dialog.Body>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {isSubmitting ? <Spinner data-icon="inline-start" size="sm" /> : null}
+              Save changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

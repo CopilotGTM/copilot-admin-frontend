@@ -1,7 +1,18 @@
 "use client";
 
 import React from "react";
-import { Button, CloseButton, Dialog, Portal, Text } from "@chakra-ui/react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 export interface AlertDialogProps {
   trigger: React.ReactNode;
@@ -9,7 +20,7 @@ export interface AlertDialogProps {
   description?: React.ReactNode;
   cancelLabel?: string;
   confirmLabel?: string;
-  confirmColorPalette?: string; // e.g., "red", "purple"
+  confirmColorPalette?: string;
   onConfirm?: () => void | Promise<void>;
 }
 
@@ -26,18 +37,17 @@ export default function AlertDialog(props: AlertDialogProps) {
 
   const [open, setOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
+  const isDestructive = confirmColorPalette === "red" || confirmColorPalette === "destructive";
 
   const handleConfirm = async () => {
     if (!onConfirm) {
       setOpen(false);
       return;
     }
+
     try {
-      const maybePromise = onConfirm();
-      if (maybePromise && typeof (maybePromise as Promise<void>).then === "function") {
-        setIsLoading(true);
-        await maybePromise;
-      }
+      setIsLoading(true);
+      await onConfirm();
       setOpen(false);
     } finally {
       setIsLoading(false);
@@ -45,32 +55,25 @@ export default function AlertDialog(props: AlertDialogProps) {
   };
 
   return (
-    <Dialog.Root role="alertdialog" open={open} onOpenChange={(e) => setOpen(!!e.open)}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content p={2} rounded="lg">
-            <Dialog.Header>
-              <Dialog.Title>{title}</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              {typeof description === "string" ? <Text>{description}</Text> : description}
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Dialog.ActionTrigger asChild>
-                <Button variant="outline">{cancelLabel}</Button>
-              </Dialog.ActionTrigger>
-              <Button colorPalette={confirmColorPalette} loading={isLoading} onClick={handleConfirm}>
-                {confirmLabel}
-              </Button>
-            </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Dialog.CloseTrigger>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {typeof description === "string" ? <DialogDescription>{description}</DialogDescription> : description}
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline" disabled={isLoading}>
+              {cancelLabel}
+            </Button>
+          </DialogClose>
+          <Button type="button" variant={isDestructive ? "destructive" : "default"} disabled={isLoading} onClick={handleConfirm}>
+            {isLoading ? <Spinner data-icon="inline-start" size="sm" /> : null}
+            {confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

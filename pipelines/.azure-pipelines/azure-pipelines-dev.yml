@@ -3,12 +3,10 @@
 # ============================================================================
 # This pipeline handles DEV deployments only.
 # Triggers on: main, feature/*, hotfix/* branches
-# Stages: SecurityGate -> Build -> Deploy
+# Deploys to: Dev Admin App Service
 #
-# Optimizations:
-# - BuildKit with docker buildx for registry-based cache (mode=max)
-# - All intermediate layers cached, not just final image layers
-# - Single build+push step (no separate docker push)
+# Mirrors the main frontend app pipeline structure while preserving admin image,
+# API, and App Service settings.
 # ============================================================================
 
 trigger:
@@ -23,7 +21,6 @@ pr:
     include:
       - main
 
-# Use dev-specific variable group
 variables:
   - group: app-secrets-dev
   - name: ENVIRONMENT
@@ -32,69 +29,78 @@ variables:
     value: "$(Build.SourcesDirectory)/Dockerfile"
   - name: tag
     value: "$(Build.BuildId)"
-  - name: AGENT_POOL
-    value: 'StaticAgentPool'
+  - name: FAST_AGENT_POOL
+    value: 'copilot-devops-dev-fast'
+  - name: DEPLOY_AGENT_POOL
+    value: 'copilot-devops-dev-deploy'
+  - name: ACR_SERVICE_CONNECTION
+    value: 'copilotgtm-acr-connection-dev'
+  - name: ACR_NAME
+    value: 'copilotgtmacrdev'
   - name: IMAGE_NAME
     value: 'copilotgtm-frontend-admin-app'
-  # Enable BuildKit for better caching and parallel builds
   - name: DOCKER_BUILDKIT
     value: '1'
-  # Environment-specific URLs
   - name: API_BASE_URL
     value: 'https://devapi.copilotgtm.com/admin'
+  - name: ADMIN_APP_URL
+    value: 'https://devadmin.copilotgtm.com'
 
 stages:
-  # ==========================================================================
-  # Stage 0: Security Gate (runs before build)
-  # ==========================================================================
   - stage: SecurityGate
     displayName: "Security Checks"
     pool:
-      name: $(AGENT_POOL)
+      name: $(FAST_AGENT_POOL)
     jobs:
       - job: SecurityTests
         displayName: "Run Security Tests & Audit"
         steps:
-          # Clean up any root-owned files left by previous Docker-based runs
-          - script: |
-              docker run --rm -v "$(Build.SourcesDirectory):/ws" node:20-alpine sh -c "rm -rf /ws/node_modules /ws/coverage" 2>/dev/null || true
-            displayName: "Clean root-owned files"
-
           - checkout: self
 
-          # Mount source read-only, copy inside container, run tests there.
-          # This avoids writing node_modules/coverage to the host filesystem
-          # which would cause permission errors on subsequent pipeline runs.
-          # Uses a persistent Docker volume for yarn cache to speed up installs.
-          - script: |
-              docker volume create yarn-cache-admin 2>/dev/null || true
-              docker run --rm \
-                -v "$(Build.SourcesDirectory):/src:ro" \
-                -v yarn-cache-admin:/usr/local/share/.cache/yarn \
-                node:20-alpine sh -c "
-                  cp -a /src /app && cd /app &&
-                  echo '##[section]Installing dependencies...' &&
-                  yarn install --frozen-lockfile --network-timeout 100000 &&
-                  echo '' &&
-                  echo '##[section]Running dependency audit...' &&
-                  (yarn audit --groups dependencies --level critical || true) &&
-                  echo '' &&
-                  echo '##[section]Running security test suite...' &&
-                  yarn test:security --ci --forceExit
-                "
-            displayName: "Security Tests & Dependency Audit"
+          - task: UseNode@1
+            displayName: "Install Node.js 20"
+            inputs:
+              version: '20.x'
 
-  # ==========================================================================
-  # Stage 1: Build & Push Docker Image to Dev ACR
-  # ==========================================================================
+          - script: corepack enable
+            displayName: "Enable Yarn via Corepack"
+
+          - task: Cache@2
+            displayName: "Cache node_modules"
+            inputs:
+              key: 'node_modules | "$(Agent.OS)" | $(Build.SourcesDirectory)/yarn.lock'
+              path: $(Build.SourcesDirectory)/node_modules
+              restoreKeys: |
+                node_modules | "$(Agent.OS)"
+
+          - script: |
+              echo '##[section]Installing dependencies...'
+              yarn install --frozen-lockfile --prefer-offline --network-timeout 100000
+            displayName: "Install Dependencies"
+
+          - script: |
+              echo '##[section]Running dependency audit...'
+              yarn audit --groups dependencies --level critical; test $? -lt 16
+            displayName: "Dependency Audit"
+
+          - script: |
+              echo '##[section]Running security test suite...'
+              yarn test:security --ci --forceExit
+            displayName: "Security Tests"
+
   - stage: Build
     displayName: "Build & Push (Dev)"
     dependsOn: SecurityGate
     pool:
-      name: $(AGENT_POOL)
+      name: $(FAST_AGENT_POOL)
     jobs:
       - job: BuildAndPush
         displayName: "Build and Push to Dev ACR"
+        variables:
+          - name: ACR_LOGIN_SERVER
+            value: $(ACR_NAME).azurecr.io
+          - name: FULL_IMAGE_NAME
+            value: $(ACR_LOGIN_SERVER)/$(IMAGE_NAME)
         steps:
           - checkout: self
 
@@ -107,73 +113,109 @@ stages:
               echo "ACR: $(ACR_LOGIN_SERVER)"
               echo "Image: $(IMAGE_NAME)"
               echo "BuildKit: $(DOCKER_BUILDKIT)"
-              echo "##[endgroup]"
-              echo ""
-              echo "##[group]Environment URLs"
               echo "API_BASE_URL: $(API_BASE_URL)"
               echo "##[endgroup]"
             displayName: "Echo Build Variables"
 
-          # Login to ACR first (needed for cache pull and image push)
           - task: Docker@2
             displayName: "Login to ACR"
             inputs:
               command: login
               containerRegistry: $(ACR_SERVICE_CONNECTION)
 
-          # Set up buildx builder with docker-container driver (supports registry cache)
           - script: |
               docker buildx create --name cibuilder --use --bootstrap 2>/dev/null || docker buildx use cibuilder
               docker buildx inspect --bootstrap
             displayName: "Setup Buildx Builder"
 
-          # Build and push in one step with registry-based cache
-          # mode=max caches ALL intermediate layers (not just final image layers)
           - script: |
-              echo "Building with buildx and registry cache..."
+              echo "Building image locally for security scanning..."
               docker buildx build \
-                --cache-from type=registry,ref=$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache \
-                --cache-to type=registry,ref=$(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache,mode=max \
+                --cache-from type=registry,ref=$(FULL_IMAGE_NAME):cache \
                 --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)" \
-                -t $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag) \
-                -t $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):latest \
-                --push \
+                --build-arg "NEXT_PUBLIC_ADMIN_APP_URL=$(ADMIN_APP_URL)" \
+                --build-arg "NEXT_PUBLIC_BUILD_SHA=$(Build.SourceVersion)" \
+                -t $(FULL_IMAGE_NAME):$(tag) \
+                -t $(FULL_IMAGE_NAME):latest \
+                --load \
                 -f $(dockerfilePath) \
                 $(Build.SourcesDirectory)
-            displayName: "Build & Push Docker Image"
+            displayName: "Build Docker Image"
+            env:
+              DOCKER_BUILDKIT: 1
+
+          - script: |
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c image \
+                --severity CRITICAL,HIGH \
+                --exit-code 1 \
+                --no-progress \
+                --ignore-unfixed \
+                $(FULL_IMAGE_NAME):$(tag)
+            displayName: "Trivy Vulnerability Scan"
+
+          - script: |
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -v "$(Build.ArtifactStagingDirectory):/output" \
+                aquasec/trivy:0.69.3@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c image \
+                --format cyclonedx \
+                --output /output/sbom.json \
+                $(FULL_IMAGE_NAME):$(tag)
+              echo "SBOM generated at $(Build.ArtifactStagingDirectory)/sbom.json"
+            displayName: "Generate SBOM"
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish SBOM"
+            inputs:
+              PathtoPublish: "$(Build.ArtifactStagingDirectory)/sbom.json"
+              ArtifactName: "sbom"
+
+          - script: |
+              chmod +x $(Build.SourcesDirectory)/scripts/container-security-test.sh
+              $(Build.SourcesDirectory)/scripts/container-security-test.sh $(FULL_IMAGE_NAME):$(tag)
+            displayName: "Container Security Tests"
+
+          - script: |
+              echo "All security checks passed. Pushing scanned image to ACR..."
+              docker push $(FULL_IMAGE_NAME):$(tag)
+              docker push $(FULL_IMAGE_NAME):latest
+            displayName: "Push Docker Image to ACR"
+
+          - script: |
+              docker buildx build \
+                --progress=plain \
+                --cache-from type=registry,ref=$(FULL_IMAGE_NAME):cache \
+                --cache-to type=registry,ref=$(FULL_IMAGE_NAME):cache,mode=min \
+                --build-arg "NEXT_PUBLIC_API_BASE_URL=$(API_BASE_URL)" \
+                --build-arg "NEXT_PUBLIC_ADMIN_APP_URL=$(ADMIN_APP_URL)" \
+                --build-arg "NEXT_PUBLIC_BUILD_SHA=$(Build.SourceVersion)" \
+                -f $(dockerfilePath) \
+                $(Build.SourcesDirectory) || echo "##[warning]Registry cache update failed; continuing because the scanned image was already pushed."
+            displayName: "Update Registry Cache"
+            condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
             env:
               DOCKER_BUILDKIT: 1
 
           - script: |
               echo "##[section]Build Complete!"
-              echo "Image: $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)"
-              echo "Cache image updated: $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):cache"
+              echo "Image: $(FULL_IMAGE_NAME):$(tag)"
+              echo "Cache: $(FULL_IMAGE_NAME):cache"
             displayName: "Build Summary"
 
-          # Pull the image back for container security testing
-          - script: |
-              echo "Pulling built image for security tests..."
-              docker pull $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)
-            displayName: "Pull Image for Security Tests"
-
-          # Run container hardening tests against the built image
-          - script: |
-              chmod +x $(Build.SourcesDirectory)/scripts/container-security-test.sh
-              $(Build.SourcesDirectory)/scripts/container-security-test.sh $(ACR_LOGIN_SERVER)/$(IMAGE_NAME):$(tag)
-            displayName: "Container Security Tests"
-
-  # ==========================================================================
-  # Stage 2: Deploy to Dev App Service
-  # ==========================================================================
   - stage: Deploy
     displayName: "Deploy (Dev)"
     dependsOn: Build
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     pool:
-      name: $(AGENT_POOL)
+      name: $(DEPLOY_AGENT_POOL)
+    variables:
+      - name: ACR_LOGIN_SERVER
+        value: $(ACR_NAME).azurecr.io
     jobs:
       - deployment: DeployWebApp
-        displayName: "Deploy to Dev App Service"
+        displayName: "Deploy to Dev Admin App Service"
         environment: 'dev'
         strategy:
           runOnce:

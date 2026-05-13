@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
-import { Box, Heading, HStack, Link, Text, Flex, Button, Icon } from "@chakra-ui/react";
-import { useColorModeValue } from "@/components/ui/color-mode";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { MoveLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AdminPageHeaderShell } from "./page-shell";
 
 export interface BreadcrumbEntry {
   label: string;
@@ -15,74 +15,51 @@ export interface PageHeaderProps {
   title: string;
   breadcrumbs: BreadcrumbEntry[];
   actions?: React.ReactNode;
-  backOnSubPathOf?: string; // e.g. "organizations" -> show back if path is /organizations/...
-  leading?: React.ReactNode; // optional element to render left of the title (e.g., logo)
+  backOnSubPathOf?: string;
+  leading?: React.ReactNode;
 }
 
 export function PageHeader({ title, breadcrumbs, actions, backOnSubPathOf, leading }: Readonly<PageHeaderProps>) {
-  const bg = useColorModeValue("white", "gray.900");
-  const border = useColorModeValue("gray.200", "gray.700");
-  const muted = useColorModeValue("gray.500", "gray.400");
-  const activeCrumbColor = useColorModeValue("gray.700", "gray.200");
-
   const pathname = usePathname();
   const router = useRouter();
-
-  const getBasePath = () => {
-    if (!backOnSubPathOf) return undefined;
-    return backOnSubPathOf.startsWith("/") ? backOnSubPathOf : `/${backOnSubPathOf}`;
-  };
-  const base = getBasePath();
+  const base = backOnSubPathOf ? (backOnSubPathOf.startsWith("/") ? backOnSubPathOf : `/${backOnSubPathOf}`) : undefined;
   const showBack = base ? pathname.startsWith(`${base}/`) : false;
 
-  const renderBreadcrumbs = () => (
-    <HStack gap={1} mt={2} color={muted} fontSize="sm">
-      {breadcrumbs.map((crumb, index) => {
-        const isLast = index === breadcrumbs.length - 1;
-        return (
-          <HStack key={`${crumb.label}-${index}`} gap={1}>
-            {crumb.href && !isLast ? (
-              <Link href={crumb.href} _hover={{ textDecoration: "underline" }}>
-                {crumb.label}
-              </Link>
-            ) : (
-              <Text color={isLast ? activeCrumbColor : muted}>{crumb.label}</Text>
-            )}
-            {!isLast && <Text>/</Text>}
-          </HStack>
-        );
-      })}
-    </HStack>
-  );
-
   return (
-    <Box
-      w="full"
-      bg={bg}
-      borderBottom="1px solid"
-      borderColor={border}
-      px={{ base: 4, md: 8 }}
-      py={{ base: 4, md: 6 }}
-    >
-      <Flex align="center" justify="space-between" gap={4}>
-        <HStack gap={3} align="center">
-          {leading ? <Box>{leading}</Box> : null}
-          <Box>
-            <Heading fontSize={{ base: "lg", md: "xl" }} fontWeight="semibold">
-              {title}
-            </Heading>
+    <header className="w-full border-b border-border bg-surface-primary">
+      <AdminPageHeaderShell className="flex items-center justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          {leading ? <div className="shrink-0">{leading}</div> : null}
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold text-fg-primary md:text-xl">{title}</h1>
             {showBack ? (
-              <Button mt={2} size="sm" variant="ghost" onClick={() => router.back()}>
-                <Icon as={MoveLeft} boxSize={4} mr={2} /> Back
+              <Button className="mt-2" size="sm" variant="ghost" onClick={() => router.back()}>
+                <MoveLeft data-icon="inline-start" /> Back
               </Button>
             ) : (
-              renderBreadcrumbs()
+              <nav className="mt-2 flex flex-wrap items-center gap-1 text-sm text-fg-muted" aria-label="Breadcrumb">
+                {breadcrumbs.map((crumb, index) => {
+                  const isLast = index === breadcrumbs.length - 1;
+                  return (
+                    <span key={`${crumb.label}-${index}`} className="flex items-center gap-1">
+                      {crumb.href && !isLast ? (
+                        <Link className="hover:text-fg-primary hover:underline" href={crumb.href}>
+                          {crumb.label}
+                        </Link>
+                      ) : (
+                        <span className={isLast ? "text-fg-secondary" : undefined}>{crumb.label}</span>
+                      )}
+                      {!isLast ? <span>/</span> : null}
+                    </span>
+                  );
+                })}
+              </nav>
             )}
-          </Box>
-        </HStack>
-        {actions ? <Box>{actions}</Box> : null}
-      </Flex>
-    </Box>
+          </div>
+        </div>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
+      </AdminPageHeaderShell>
+    </header>
   );
 }
 

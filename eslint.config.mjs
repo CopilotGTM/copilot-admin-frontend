@@ -1,36 +1,55 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
+import prettierConfig from "eslint-config-prettier";
 import unusedImportsPlugin from "eslint-plugin-unused-imports";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+const reactCompilerRules = [
+  "config",
+  "error-boundaries",
+  "gating",
+  "globals",
+  "immutability",
+  "incompatible-library",
+  "preserve-manual-memoization",
+  "purity",
+  "refs",
+  "set-state-in-effect",
+  "set-state-in-render",
+  "static-components",
+  "unsupported-syntax",
+  "use-memo",
+];
 
 const eslintConfig = [
   {
-    ignores: ["next-env.d.ts", ".next/*", "node_modules/*", "tests-examples/*"],
+    ignores: [
+      "next-env.d.ts",
+      ".next/*",
+      "coverage/**",
+      "node_modules/*",
+      "tests-examples/*",
+      "playwright-report/*",
+      "test-results/*",
+    ],
   },
-  // Convert traditional "extends" using FlatCompat
-  ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  prettierConfig,
   {
     plugins: {
       "unused-imports": unusedImportsPlugin,
     },
-    // You can add more rules, overrides, etc. here
     rules: {
-      // Ensure that unused imports are removed or flagged as errors
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "error",
         { args: "after-used", argsIgnorePattern: "^_" },
       ],
-
-      // If you want to explicitly set the Prettier error level (optional):
-      // 'prettier/prettier': 'error',
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+      ...Object.fromEntries(
+        reactCompilerRules.map((rule) => [`react-hooks/${rule}`, "off"]),
+      ),
     },
   },
 ];

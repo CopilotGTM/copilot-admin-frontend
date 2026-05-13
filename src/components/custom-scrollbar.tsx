@@ -1,7 +1,7 @@
-import { Box, BoxProps } from "@chakra-ui/react";
-import React, { forwardRef } from "react";
+import { forwardRef } from "react";
+import { cn } from "@/lib/utils";
 
-interface CustomScrollbarProps extends BoxProps {
+interface CustomScrollbarProps extends React.HTMLAttributes<HTMLDivElement> {
   scrollbarWidth?: string;
   scrollbarTrackColor?: string;
   scrollbarThumbColor?: string;
@@ -10,46 +10,25 @@ interface CustomScrollbarProps extends BoxProps {
 }
 
 export const CustomScrollbar = forwardRef<HTMLDivElement, CustomScrollbarProps>(
-  (
-    {
-      children,
-      scrollbarWidth = "10px",
-      scrollbarTrackColor = "gray.100",
-      scrollbarThumbColor = "purple.200",
-      scrollbarThumbHoverColor = "gray.500",
-      scrollbarMargin = "10px",
-      ...rest
-    },
-    ref,
-  ) => {
-    const scrollbarStyles = {
-      "&::-webkit-scrollbar": {
-        width: scrollbarWidth,
-      },
-      "&::-webkit-scrollbar-track": {
-        backgroundColor: scrollbarTrackColor,
-        borderRadius: "20px",
-      },
-      "&::-webkit-scrollbar-track-piece": {
-        backgroundColor: "#f1f1f1",
-        borderRadius: "5px",
-        margin: scrollbarMargin,
-      },
-      "&::-webkit-scrollbar-thumb": {
-        backgroundColor: scrollbarThumbColor,
-        borderRadius: "20px",
-        "&:hover": {
-          backgroundColor: scrollbarThumbHoverColor,
-        },
-      },
-      scrollbarWidth: "thin", // Firefox
-      scrollbarGutter: "stable", // Keeps layout from shifting
-    };
-
+  ({ children, className, style, scrollbarWidth = "10px", scrollbarTrackColor, scrollbarThumbColor, scrollbarThumbHoverColor, scrollbarMargin, ...rest }, ref) => {
     return (
-      <Box overflowY="auto" css={scrollbarStyles} ref={ref} {...rest}>
+      <div
+        ref={ref}
+        className={cn("overflow-y-auto [scrollbar-gutter:stable] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-[var(--scrollbar-width)] [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-[var(--scrollbar-track)] [&::-webkit-scrollbar-track-piece]:my-[var(--scrollbar-margin)] [&::-webkit-scrollbar-track-piece]:rounded-md [&::-webkit-scrollbar-track-piece]:bg-[var(--scrollbar-track)] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[var(--scrollbar-thumb)] hover:[&::-webkit-scrollbar-thumb]:bg-[var(--scrollbar-thumb-hover)]", className)}
+        style={
+          {
+            "--scrollbar-width": scrollbarWidth,
+            "--scrollbar-track": scrollbarTrackColor ?? "var(--color-surface-secondary)",
+            "--scrollbar-thumb": scrollbarThumbColor ?? "var(--color-brand-subtle)",
+            "--scrollbar-thumb-hover": scrollbarThumbHoverColor ?? "var(--color-border-emphasized)",
+            "--scrollbar-margin": typeof scrollbarMargin === "number" ? `${scrollbarMargin}px` : (scrollbarMargin ?? "10px"),
+            ...style,
+          } as React.CSSProperties
+        }
+        {...rest}
+      >
         {children}
-      </Box>
+      </div>
     );
   },
 );

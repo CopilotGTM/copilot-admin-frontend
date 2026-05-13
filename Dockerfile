@@ -15,18 +15,21 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder (install deps + build)
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:20.20.2-alpine3.23 AS builder
 
 # Install libc6-compat for Alpine compatibility with some npm packages
 RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HUSKY=0
+
 # Copy package files
 COPY package.json yarn.lock ./
 
 # Install dependencies with cache mount for faster rebuilds
-RUN --mount=type=cache,target=/root/.yarn \
+RUN --mount=type=cache,target=/root/.cache/yarn \
     yarn install --frozen-lockfile --network-timeout 100000
 
 # Copy source code
@@ -34,18 +37,21 @@ COPY . .
 
 # Build-time args for NEXT_PUBLIC_* variables (baked into client bundle)
 ARG NEXT_PUBLIC_API_BASE_URL
+ARG NEXT_PUBLIC_ADMIN_APP_URL
 
 # Set environment variables for build
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_ADMIN_APP_URL=${NEXT_PUBLIC_ADMIN_APP_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
-RUN yarn build
+RUN --mount=type=cache,target=/app/.next/cache \
+    yarn build
 
 # -----------------------------------------------------------------------------
 # Stage 2: Runner (Production - Hardened)
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS runner
+FROM node:20.20.2-alpine3.23 AS runner
 
 WORKDIR /app
 

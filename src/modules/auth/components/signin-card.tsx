@@ -1,42 +1,24 @@
 "use client";
 
-import {
-  FormControl,
-  FormErrorMessage,
-  FormLabel,
-} from "@chakra-ui/form-control";
-import {
-  Flex,
-  Box,
-  Input,
-  Checkbox,
-  Stack,
-  Button,
-  Heading,
-  Text,
-  Image,
-  InputGroup,
-  Icon,
-  Link,
-} from "@chakra-ui/react";
-import { LogIn, User } from "lucide-react";
-import PasswordInput from "@/components/password-input";
-import { useRouter, useSearchParams } from "next/navigation";
-import { loginSchema, type LoginInput } from "@/modules/auth/schemas";
+import Image from "next/image";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import { LogIn, User } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import PasswordInput from "@/components/password-input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { toaster } from "@/components/ui/toaster";
 import { loginAdmin } from "@/modules/auth/api";
+import { loginSchema, type LoginInput } from "@/modules/auth/schemas";
 import { useAuthStore } from "@/modules/auth/store";
 import type { AdminUser } from "@/modules/auth/types";
-import { toaster } from "@/components/ui/toaster";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect } from "react";
-import {
-  getRememberedEmail,
-  setRememberedEmail,
-  clearRememberedEmail,
-} from "@/modules/auth/utils";
-
+import { clearRememberedEmail, getRememberedEmail, setRememberedEmail } from "@/modules/auth/utils";
 export function SigninCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,7 +28,7 @@ export function SigninCard() {
   const [isClient, setIsClient] = useState(false);
 
   const {
-    register: signin,
+    register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
     setValue,
@@ -56,7 +38,6 @@ export function SigninCard() {
     defaultValues: { email: "", password: "" },
   });
 
-  // Load remembered email on client side only to avoid hydration mismatch
   useEffect(() => {
     setIsClient(true);
     const email = getRememberedEmail();
@@ -70,12 +51,9 @@ export function SigninCard() {
   const loginMutation = useMutation({
     mutationFn: loginAdmin,
     onSuccess: (response) => {
-      console.log("Login response received:", response);
-      // The API returns { status, data, message } - extract the inner data
       const data = (response as unknown as { status: string; data: typeof response; message: string }).data;
-      
+
       if (data.state === "ACTIVE" && data.tokens) {
-        console.log("Setting auth with tokens...");
         setAuth(
           data.tokens.access_token,
           data.tokens.refresh_token,
@@ -89,25 +67,18 @@ export function SigninCard() {
             email_verified: data.email_verified,
             last_login_at: data.last_login_at,
           } as AdminUser,
-          rememberMe
+          rememberMe,
         );
 
-        // Handle remembered email securely (no password stored)
         if (rememberMe) {
           setRememberedEmail(data.email);
         } else {
           clearRememberedEmail();
         }
 
-        toaster.create({
-          title: "Login successful",
-          duration: 2000,
-        });
-        
-        // Redirect to callback URL or home page
+        toaster.create({ title: "Login successful", type: "success", duration: 2000 });
         const callbackUrl = searchParams.get("callbackUrl");
         const redirectTo = callbackUrl ? decodeURI(callbackUrl) : "/";
-        console.log("Redirecting to:", redirectTo);
         setTimeout(() => {
           globalThis.location.href = redirectTo;
         }, 100);
@@ -115,11 +86,11 @@ export function SigninCard() {
         toaster.create({
           title: "Password change required",
           description: "Please set your password to continue",
+          type: "warning",
           duration: 3000,
         });
         router.push(`${data.password_reset_link}&force_change=true`);
       } else {
-        console.error("Unexpected login response:", response);
         toaster.create({
           title: "Login failed",
           description: "Unexpected response from server",
@@ -128,8 +99,7 @@ export function SigninCard() {
         });
       }
     },
-    onError: (error: unknown) => {
-      console.error("Login error:", error);
+    onError: () => {
       toaster.create({
         title: "Login failed",
         description: "Something went wrong",
@@ -140,172 +110,69 @@ export function SigninCard() {
   });
 
   const handleRememberMeChange = () => {
-    const newRememberMe = !rememberMe;
-    setRememberMe(newRememberMe);
-    if (!newRememberMe) {
-      clearRememberedEmail();
-    }
+    const nextRememberMe = !rememberMe;
+    setRememberMe(nextRememberMe);
+    if (!nextRememberMe) clearRememberedEmail();
   };
 
   const onSubmit = (data: LoginInput) => {
-    console.log("=== SUBMIT CLICKED ===");
-    console.log("Form data:", data);
     loginMutation.mutate(data);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit(onSubmit)();
-  };
-
   return (
-    <Flex minH={"100vh"} align={"center"} justify={"center"} bg={"white"}>
-      <Stack gap={8} mx={"auto"} maxW={"lg"} py={12} px={6}>
-        <Box
-          w={"full"}
-          maxW={"md"}
-          rounded={"xl"}
-          bg={"white"}
-          boxShadow={"md"}
-          blur={"md"}
-          p={10}
-        >
-          <Stack align={"center"}>
-            <Image src="./logo.svg" alt="Copilot-GTM logo" />
-            <Heading fontSize={"2xl"} fontWeight={"semibold"} color={"gray.800"}>
-              Welcome back
-            </Heading>
-            <Text fontSize={"sm"} fontWeight={"medium"} color={"gray.500"}>
-              Log in to your CopilotGTM Admin Panel
-            </Text>
-          </Stack>
-          
-          <form onSubmit={handleFormSubmit}>
-          <Stack gap={5} mt={12}>
-            <FormControl display="flex" flexDirection="column" gap={4}>
-              <FormLabel fontSize="sm" fontWeight="medium" color="gray.600">
-                Username
-              </FormLabel>
-              <InputGroup
-                startElement={
-                  <Button disabled variant={"ghost"} w={"48px"} h={"48px"} type="button">
-                    <Icon as={User} color="gray.400" size={"md"} />
-                  </Button>
-                }
-              >
+    <main className="grid min-h-dvh place-items-center bg-surface-secondary px-4 py-10">
+      <Card className="w-full max-w-md border-border bg-surface-primary shadow-card-elevated">
+        <CardContent className="px-8 py-9">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <Image src="/logo-full.svg" alt="Copilot-GTM logo" width={155} height={32} className="h-auto w-[155px]" priority />
+            <div className="mt-4 space-y-1">
+              <h1 className="text-2xl font-semibold text-fg-primary">Welcome back</h1>
+              <p className="text-sm font-medium text-fg-muted">Log in to your CopilotGTM admin panel</p>
+            </div>
+          </div>
+
+          <form className="mt-10 flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
+            <label className="flex flex-col gap-2 text-sm font-medium text-fg-secondary">
+              Username
+              <span className="relative block">
+                <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
                 <Input
-                  size={"lg"}
-                  variant={"outline"}
+                  className="h-12 pl-10"
                   type="email"
-                  borderRadius={6}
-                  height={"48px"}
-                  ps={"56px"}
-                  pr={"16px"}
+                  autoComplete="username"
                   placeholder="Enter your username"
-                  _placeholder={{
-                    fontSize: "md",
-                    fontWeight: "normal",
-                    color: "gray.400",
-                  }}
-                  {...signin("email")}
+                  aria-invalid={!!errors.email}
+                  {...register("email")}
                 />
-              </InputGroup>
-              {errors.email && (
-                <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
-              )}
-              {isClient && emailValue && (
-                <Text fontSize="xs" color="green.500" mt={1}>
-                  ✓ Email remembered from previous login
-                </Text>
-              )}
-            </FormControl>
+              </span>
+              {errors.email ? <span className="text-xs font-normal text-destructive">{errors.email.message}</span> : null}
+              {isClient && emailValue ? <span className="text-xs font-normal text-fg-success">Email remembered from previous login</span> : null}
+            </label>
 
-            <PasswordInput
-              error={errors.password?.message || ""}
-              {...signin("password")}
-            />
+            <PasswordInput error={errors.password?.message || ""} {...register("password")} />
 
-            <Stack gap={10}>
-              <Stack
-                direction={{ base: "column", sm: "row" }}
-                align={"start"}
-                justify={"space-between"}
-              >
-                <Checkbox.Root
-                  checked={rememberMe}
-                  onCheckedChange={handleRememberMeChange}
-                >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control
-                    css={{
-                      "[data-state=checked] &": {
-                        backgroundColor: "purple.600",
-                        borderColor: "purple.600",
-                      },
-                    }}
-                  />
-                  <Checkbox.Label
-                    fontSize="sm"
-                    fontWeight="normal"
-                    color="gray.600"
-                  >
-                    Remember me
-                  </Checkbox.Label>
-                </Checkbox.Root>
-
-                <Link
-                  fontSize={"sm"}
-                  fontWeight={"semibold"}
-                  color={"purple.600"}
-                  href="/forgot-password"
-                  _hover={{
-                    opacity: 0.8,
-                    textDecoration: "none",
-                  }}
-                  _focus={{
-                    outline: "none",
-                  }}
-                  _active={{
-                    outline: "none",
-                  }}
-                >
+            <div className="flex flex-col gap-5">
+              <div className="flex items-center justify-between gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-fg-secondary">
+                  <Checkbox checked={rememberMe} onCheckedChange={handleRememberMeChange} />
+                  Remember me
+                </label>
+                <Link className="text-sm font-semibold text-brand-primary hover:text-brand-hover" href="/forgot-password">
                   Forgot password?
                 </Link>
-              </Stack>
-              
-              <Button
-                type="submit"
-                bg={"purple.600"}
-                height={"48px"}
-                borderRadius={"6px"}
-                fontSize={"lg"}
-                fontWeight={"semibold"}
-                color={"white"}
-                _hover={{ bg: "purple.500" }}
-                loading={isSubmitting || loginMutation.isPending}
-                disabled={!isValid || isSubmitting || loginMutation.isPending}
-                loadingText="Signing in"
-                spinnerPlacement="end"
-              >
-                {!loginMutation.isPending && (
-                  <>
-                    Sign in
-                    <Icon as={LogIn} boxSize={4} strokeWidth={2.5} ml={2} />
-                  </>
-                )}
+              </div>
+
+              <Button type="submit" className="h-12 text-base" disabled={!isValid || isSubmitting || loginMutation.isPending}>
+                {loginMutation.isPending ? "Signing in" : "Sign in"}
+                {!loginMutation.isPending ? <LogIn data-icon="inline-end" /> : null}
               </Button>
-            </Stack>
-            
-            {loginMutation.isError && (
-              <Text textAlign={"center"} fontSize={"sm"} color={"red.500"}>
-                An error occurred during login
-              </Text>
-            )}
-          </Stack>
+            </div>
+
+            {loginMutation.isError ? <p className="text-center text-sm text-destructive">An error occurred during login</p> : null}
           </form>
-        </Box>
-      </Stack>
-    </Flex>
+        </CardContent>
+      </Card>
+    </main>
   );
 }
 

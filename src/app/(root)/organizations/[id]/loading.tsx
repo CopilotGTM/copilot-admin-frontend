@@ -1,31 +1,25 @@
-"use client";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { Box, HStack, Skeleton, Stack } from "@chakra-ui/react";
-
-export default function LoadingOrganizationDetails() {
+export default function LoadingOrganizationDetail() {
   return (
-    <Box w="full" px={10} py={6}>
-      <Stack gap={4} w="full" maxW="6xl" mx="auto">
-        <HStack gap={3} alignItems="center">
-          <Skeleton boxSize={10} rounded="md" />
-          <Skeleton height="28px" width="240px" rounded="md" />
-        </HStack>
-
-        <Skeleton height="40px" rounded="md" />
-
-        <Box borderWidth="1px" rounded="lg" p={4}>
-          <Stack gap={3}>
+    <div className="w-full px-4 py-6 md:px-10">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+        <Skeleton className="h-12 w-2/3 rounded-md" />
+        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface-primary p-5 shadow-xs">
+            <Skeleton className="h-8 w-1/2 rounded-md" />
             {Array.from({ length: 6 }).map((_, idx) => (
-              <HStack key={idx} gap={3}>
-                <Skeleton height="24px" flex={2} rounded="md" />
-                <Skeleton height="24px" flex={2} rounded="md" />
-                <Skeleton height="24px" flex={1} rounded="md" />
-                <Skeleton height="24px" flex={1} rounded="md" />
-              </HStack>
+              <Skeleton key={idx} className="h-12 rounded-md" />
             ))}
-          </Stack>
-        </Box>
-      </Stack>
-    </Box>
+          </div>
+          <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-primary p-5 shadow-xs">
+            <Skeleton className="h-7 w-32 rounded-md" />
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <Skeleton key={idx} className="h-16 rounded-md" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

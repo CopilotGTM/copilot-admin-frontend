@@ -1,71 +1,51 @@
-import { useState } from "react";
-import { Input, InputGroup, Button, Icon } from "@chakra-ui/react";
-import {
-  FormControl,
-  FormErrorMessage,
-  FormLabel,
-} from "@chakra-ui/form-control";
-import { Eye, EyeOff, KeyRound } from "lucide-react";
+"use client";
 
-interface PassWordInputProps {
+import { useState } from "react";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+
+interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  placeholder?: string;
   error?: string;
-  // Allow any additional props from React Hook Form's register
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
 }
 
 export default function PasswordInput({
   label = "Password",
   placeholder = "Enter password",
   error = "",
+  className,
+  autoComplete = "current-password",
   ...props
-}: PassWordInputProps) {
+}: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <FormControl id="password" display="flex" flexDirection="column" gap={4}>
-      <FormLabel fontSize="sm" fontWeight="medium" color="gray.600">
-        {label}
-      </FormLabel>
-
-      <InputGroup
-        startElement={
-          <Button disabled variant={"ghost"} w={"48px"} h={"48px"} type="button">
-            <Icon as={KeyRound} color="gray.400" size={"md"} />
-          </Button>
-        }
-        endElement={
-          <Button
-            variant="ghost"
-            onClick={() => setShowPassword((prev) => !prev)}
-            w={"48px"}
-            h={"48px"}
-            type="button"
-          >
-            {showPassword ? <Eye /> : <EyeOff />}
-          </Button>
-        }
-      >
+    <label className="flex flex-col gap-2 text-sm font-medium text-fg-secondary">
+      {label}
+      <span className="relative block">
+        <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-muted" />
         <Input
-          size={"lg"}
-          variant={"outline"}
-          borderRadius={6}
-          height={"48px"}
-          ps={"56px"}
-          pe={"56px"}
+          className={cn("h-12 pl-10 pr-11", className)}
           type={showPassword ? "text" : "password"}
           placeholder={placeholder}
-          _placeholder={{
-            fontSize: "md",
-            fontWeight: "normal",
-            color: "gray.400",
-          }}
+          autoComplete={autoComplete}
+          aria-invalid={!!error}
           {...props}
         />
-      </InputGroup>
-      {error && <FormErrorMessage>{error}</FormErrorMessage>}
-    </FormControl>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="absolute right-2 top-1/2 -translate-y-1/2"
+          onClick={() => setShowPassword((prev) => !prev)}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+        >
+          {showPassword ? <EyeOff /> : <Eye />}
+        </Button>
+      </span>
+      {error ? <span className="text-xs font-normal text-destructive">{error}</span> : null}
+    </label>
   );
 }

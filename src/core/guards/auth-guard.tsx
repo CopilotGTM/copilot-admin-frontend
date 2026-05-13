@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuthStore } from "@/modules/auth/store";
-import { Box, Spinner, VStack, Text } from "@chakra-ui/react";
 
 export interface AuthGuardProps {
   readonly children: React.ReactNode;
@@ -16,12 +16,8 @@ export function AuthGuard({ children, redirectTo = "/signin" }: Readonly<AuthGua
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Wait for hydration
-    if (!isHydrated) {
-      return;
-    }
+    if (!isHydrated) return;
 
-    // Check if authenticated
     if (!access_token || !user) {
       router.replace(redirectTo);
     } else {
@@ -29,24 +25,17 @@ export function AuthGuard({ children, redirectTo = "/signin" }: Readonly<AuthGua
     }
   }, [access_token, user, isHydrated, router, redirectTo]);
 
-  // Show loading state during hydration or auth check
   if (!isHydrated || isChecking) {
     return (
-      <Box
-        minH="100vh"
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <VStack gap={4}>
-          <Spinner size="xl" color="blue.500" />
-          <Text color="gray.500">Loading...</Text>
-        </VStack>
-      </Box>
+      <div className="grid min-h-dvh place-items-center bg-surface-secondary">
+        <div className="flex flex-col items-center gap-4 text-sm text-fg-muted">
+          <Spinner size="lg" />
+          Loading...
+        </div>
+      </div>
     );
   }
 
-  // User is authenticated
   return <>{children}</>;
 }
 
