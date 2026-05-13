@@ -76,6 +76,18 @@ describe("Security Headers Configuration", () => {
       expect(dockerfileContent).toMatch(/apk del|rm.*apk/);
     });
 
+    it("should remove bundled Node package managers from the runtime image", () => {
+      expect(dockerfileContent).toContain(
+        "/usr/local/lib/node_modules/npm"
+      );
+      expect(dockerfileContent).toContain(
+        "/usr/local/lib/node_modules/corepack"
+      );
+      expect(dockerfileContent).toContain("/usr/local/bin/npm");
+      expect(dockerfileContent).toContain("/usr/local/bin/npx");
+      expect(dockerfileContent).toContain("/opt/yarn-v*");
+    });
+
     it("should remove source maps", () => {
       expect(dockerfileContent).toContain("*.map");
       expect(dockerfileContent).toContain("-delete");
