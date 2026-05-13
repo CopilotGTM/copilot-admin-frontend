@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { ChakraProvider, type ChakraProviderProps } from "./chakra-provider";
+import { AdminColorModeProvider, type AdminColorModeProviderProps } from "./color-mode-provider";
 import { QueryProvider } from "./query-provider";
 import { setupAxiosInterceptors } from "@/core/api/axios-instance";
 import { useAuthStore } from "@/modules/auth/store";
 import { refreshTokens } from "@/modules/auth/api";
 
-export interface AppProvidersProps extends ChakraProviderProps {
+export interface AppProvidersProps extends AdminColorModeProviderProps {
   readonly children: React.ReactNode;
 }
 
@@ -33,11 +33,11 @@ function AxiosInterceptorSetup() {
 
 export function AppProviders({ children, ...props }: Readonly<AppProvidersProps>) {
   return (
-    <ChakraProvider {...props}>
+    <AdminColorModeProvider {...props}>
       <QueryProvider>
         <AxiosInterceptorSetup />
         {children}
       </QueryProvider>
-    </ChakraProvider>
+    </AdminColorModeProvider>
   );
 }

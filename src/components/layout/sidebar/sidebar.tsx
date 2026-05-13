@@ -1,28 +1,16 @@
 "use client";
 
 import React from "react";
-import {
-  Box,
-  Flex,
-  Icon,
-  Drawer,
-  Portal,
-  useDisclosure,
-  BoxProps,
-  FlexProps,
-  Separator,
-  useBreakpointValue,
-} from "@chakra-ui/react";
-
-import { useColorModeValue } from "@/components/ui/color-mode";
-import { SidebarClose } from "./sidebar-close";
-import { Bell, Building2, Home, Settings, Users } from "lucide-react";
-import UserMenu from "./user-menu";
-import { Tooltip } from "@/components/ui/tooltip";
-import logo from "@/../public/logo.svg";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Bell, Building2, Settings, Users } from "lucide-react";
+import logoFull from "@/../public/logo-full.svg";
+import logoIcon from "@/../public/logo-icon.svg";
+import { Tooltip } from "@/components/ui/tooltip";
+import { SidebarClose } from "./sidebar-close";
+import UserMenu from "./user-menu";
+import { cn } from "@/lib/utils";
 
 interface LinkItemProps {
   name: string;
@@ -30,8 +18,7 @@ interface LinkItemProps {
   href: string;
 }
 
-const ENABLE_NOTIFICATIONS =
-  process.env.NEXT_PUBLIC_ENABLE_NOTIFICATIONS !== "false";
+const ENABLE_NOTIFICATIONS = process.env.NEXT_PUBLIC_ENABLE_NOTIFICATIONS !== "false";
 const ENABLE_SETTINGS = process.env.NEXT_PUBLIC_ENABLE_SETTINGS !== "false";
 
 const mainLinkItems: Array<LinkItemProps> = [
@@ -40,12 +27,8 @@ const mainLinkItems: Array<LinkItemProps> = [
 ];
 
 const secondaryLinkItems: Array<LinkItemProps> = [
-  ...(ENABLE_NOTIFICATIONS
-    ? [{ name: "Notifications", icon: Bell, href: "/notifications" }]
-    : []),
-  ...(ENABLE_SETTINGS
-    ? [{ name: "Settings", icon: Settings, href: "/settings" }]
-    : []),
+  ...(ENABLE_NOTIFICATIONS ? [{ name: "Notifications", icon: Bell, href: "/notifications" }] : []),
+  ...(ENABLE_SETTINGS ? [{ name: "Settings", icon: Settings, href: "/settings" }] : []),
 ];
 
 export interface CollapsibleSidebarProps {
@@ -53,169 +36,83 @@ export interface CollapsibleSidebarProps {
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export function CollapsibleSidebar({
-  isCollapsed,
-  setIsCollapsed,
-}: Readonly<CollapsibleSidebarProps>) {
-  const { open: isSidebarOpen } = useDisclosure();
-
-  // useBreakpointValue returns a value based on the current breakpoint
-  const defaultIsCollapsed =
-    useBreakpointValue({ base: true, md: true, lg: true }) ?? false;
-
-  React.useEffect(() => {
-    setIsCollapsed(defaultIsCollapsed);
-  }, [defaultIsCollapsed, setIsCollapsed]);
-
-  const handleToggleCollapse = () => {
-    setIsCollapsed((prev: boolean) => !prev);
-  };
+export function CollapsibleSidebar({ isCollapsed, setIsCollapsed }: Readonly<CollapsibleSidebarProps>) {
+  const handleToggleCollapse = () => setIsCollapsed((prev) => !prev);
 
   return (
-    <Box minH="100vh" bg={useColorModeValue("gray.100", "gray.900")}>
-      <SidebarContent
-        isCollapsed={isCollapsed}
-        onToggleCollapse={handleToggleCollapse}
-      />
-      <Drawer.Root open={isSidebarOpen}>
-        <Portal>
-          <Drawer.Backdrop />
-          <Drawer.Positioner>
-            <Drawer.Content>
-              <SidebarContent
-                isCollapsed={isCollapsed}
-                onToggleCollapse={handleToggleCollapse}
-              />
-            </Drawer.Content>
-          </Drawer.Positioner>
-        </Portal>
-      </Drawer.Root>
-    </Box>
+    <div className="min-h-dvh bg-surface-secondary">
+      <SidebarContent isCollapsed={isCollapsed} onToggleCollapse={handleToggleCollapse} />
+    </div>
   );
 }
 
-interface SidebarProps extends BoxProps {
+interface SidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
 
-const SidebarContent = ({
-  isCollapsed,
-  onToggleCollapse,
-  ...rest
-}: SidebarProps) => {
+const SidebarContent = ({ isCollapsed, onToggleCollapse }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
 
   return (
-    <Box
-      bg={useColorModeValue("white", "gray.900")}
-      borderRight="1px solid"
-      borderRightColor={useColorModeValue("gray.200", "gray.700")}
-      w={{ base: isCollapsed ? "64px" : "240px" }}
-      pos="fixed"
-      h="full"
-      pb={6}
-      transitionProperty="width"
-      transitionDuration="0.2s"
-      {...rest}
+    <nav
+      className={cn(
+        "fixed flex h-dvh flex-col justify-between border-r border-border bg-surface-primary pb-6 transition-[width] duration-200",
+        isCollapsed ? "w-16" : "w-60",
+      )}
+      aria-label="Admin navigation"
     >
-      <Flex
-        h={"full"}
-        w={"full"}
-        flexDirection={"column"}
-        justifyContent={"space-between"}
-      >
-        <Box>
-          <Flex
-            h="20"
-            alignItems="center"
-            mx={isCollapsed ? 2 : 7}
-            gap={4}
-            justifyContent={isCollapsed ? "center" : "start"}
-          >
-            <Link
-              href="/organizations"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: isCollapsed ? 0 : 12,
-                textDecoration: "none",
-              }}
-              aria-label="Go to Organizations"
-            >
-              <Image src={logo} alt="Copilot-GTM logo" />
-              {!isCollapsed && (
-                <Flex alignItems="center" gap={2}>
-                  <Icon as={Home} fontSize="24" color="rgba(140, 86, 176, 1)" />
-                  <Box
-                    fontSize="md"
-                    fontWeight="medium"
-                    lineHeight={"24px"}
-                    color="rgba(140, 86, 176, 1)"
-                  >
-                    CoPilotGTM
-                  </Box>
-                </Flex>
-              )}
-            </Link>
-          </Flex>
+      <div>
+        <div className={cn("flex h-20 items-center gap-4", isCollapsed ? "justify-center px-2" : "px-7")}>
+          <Link href="/organizations" className="flex items-center gap-3" aria-label="Go to organizations">
+            <Image
+              src={isCollapsed ? logoIcon : logoFull}
+              alt="Copilot-GTM logo"
+              className={cn("h-auto shrink-0", isCollapsed ? "w-8" : "w-[155px]")}
+              priority
+            />
+          </Link>
+        </div>
+        <div className="flex flex-col gap-1">
           {mainLinkItems.map((link) => (
-            <Tooltip
-              showArrow
-              key={link.name}
-              content={link.name}
-              positioning={{ placement: "right" }}
-            >
+            <Tooltip showArrow key={link.name} content={link.name} positioning={{ placement: "right" }} disabled={!isCollapsed}>
               <NavItem
-                key={link.name}
                 icon={link.icon}
                 isCollapsed={isCollapsed}
-                isActive={
-                  pathname === link.href ||
-                  pathname?.startsWith(link.href + "/")
-                }
+                isActive={pathname === link.href || pathname?.startsWith(`${link.href}/`)}
                 onClick={() => router.push(link.href)}
               >
                 {link.name}
               </NavItem>
             </Tooltip>
           ))}
-        </Box>
-        <Box spaceY={4}>
-          {secondaryLinkItems.map((link) => (
-            <Tooltip
-              showArrow
-              key={link.name}
-              content={link.name}
-              positioning={{ placement: "right" }}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        {secondaryLinkItems.map((link) => (
+          <Tooltip showArrow key={link.name} content={link.name} positioning={{ placement: "right" }} disabled={!isCollapsed}>
+            <NavItem
+              icon={link.icon}
+              isCollapsed={isCollapsed}
+              isActive={pathname === link.href || pathname?.startsWith(`${link.href}/`)}
+              onClick={() => router.push(link.href)}
             >
-              <NavItem
-                key={link.name}
-                icon={link.icon}
-                isCollapsed={isCollapsed}
-                isActive={
-                  pathname === link.href ||
-                  pathname?.startsWith(link.href + "/")
-                }
-                onClick={() => router.push(link.href)}
-              >
-                {link.name}
-              </NavItem>
-            </Tooltip>
-          ))}
+              {link.name}
+            </NavItem>
+          </Tooltip>
+        ))}
+        <div className="mx-4 my-2 h-px bg-border" />
+        <UserMenu isCollapsed={isCollapsed} />
+      </div>
 
-          <Separator mx={isCollapsed ? 0 : 4} />
-
-          <UserMenu isCollapsed={isCollapsed} />
-        </Box>
-      </Flex>
       <SidebarClose isCollapsed={isCollapsed} onClick={onToggleCollapse} />
-    </Box>
+    </nav>
   );
 };
 
-interface NavItemProps extends FlexProps {
+interface NavItemProps {
   icon: React.ElementType;
   children: React.ReactNode;
   isCollapsed: boolean;
@@ -223,63 +120,22 @@ interface NavItemProps extends FlexProps {
   onClick?: () => void;
 }
 
-const NavItem = ({
-  icon,
-  children,
-  isCollapsed,
-  isActive,
-  onClick,
-  ...rest
-}: NavItemProps) => {
-  const activeBg = useColorModeValue("purple.50", "purple.900");
-  const activeColor = useColorModeValue("purple.700", "purple.200");
-  const inactiveColor = useColorModeValue("gray.600", "gray.400");
-  const hoverBg = useColorModeValue("gray.100", "gray.800");
-  const activeHoverBg = useColorModeValue("purple.100", "purple.800");
-
+const NavItem = ({ icon: Icon, children, isCollapsed, isActive, onClick }: NavItemProps) => {
   return (
-    <Box
-      as="a"
-      style={{ textDecoration: "none" }}
-      _focus={{ boxShadow: "none" }}
+    <button
+      type="button"
       onClick={onClick}
-      cursor="pointer"
+      className={cn(
+        "mx-2 flex items-center rounded-md px-3 py-3 text-sm transition-colors focus-visible:shadow-focus focus-visible:outline-none",
+        isCollapsed ? "justify-center" : "gap-3",
+        isActive
+          ? "bg-brand-subtle font-semibold text-brand-primary"
+          : "text-fg-secondary hover:bg-surface-secondary hover:text-fg-primary",
+      )}
     >
-      <Flex
-        align="center"
-        px={3}
-        py={3}
-        mx={isCollapsed ? 2 : 4}
-        borderRadius="lg"
-        cursor="pointer"
-        bg={isActive ? activeBg : "transparent"}
-        color={isActive ? activeColor : inactiveColor}
-        fontWeight={isActive ? "semibold" : "normal"}
-        _hover={{
-          bg: isActive ? activeHoverBg : hoverBg,
-        }}
-        {...rest}
-      >
-        {icon && (
-          <Icon
-            mr={isCollapsed ? 0 : 4}
-            fontSize="24"
-            color="currentColor"
-            as={icon}
-          />
-        )}
-        {!isCollapsed && (
-          <Box
-            fontSize="md"
-            fontWeight="inherit"
-            lineHeight={"24px"}
-            color="currentColor"
-          >
-            {children}
-          </Box>
-        )}
-      </Flex>
-    </Box>
+      <Icon className="size-5 shrink-0" />
+      {!isCollapsed ? <span className="truncate">{children}</span> : null}
+    </button>
   );
 };
 

@@ -1,6 +1,5 @@
-import { Flex } from "@chakra-ui/react";
-// cleaned unused imports
+import { redirect } from "next/navigation";
 
-export default function Home(){
-  return <Flex />;
-};
+export default function Home() {
+  redirect("/organizations");
+}

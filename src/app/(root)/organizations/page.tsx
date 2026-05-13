@@ -1,48 +1,99 @@
 "use client";
 
-import React, { useMemo, useEffect, useRef, useState } from "react";
-import { Box, Text, Button, Stack, Icon, Skeleton, HStack, Badge, IconButton, Menu, Portal, Separator } from "@chakra-ui/react";
-import { Tooltip } from "@/components/ui/tooltip";
-import { PageHeader } from "@/components/layout";
-import { Column, CustomTable } from "@/components/ui/custom-table";
-import { useOrganisationHistory } from "@/modules/organizations/hooks";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  listOrganizations, 
-  updateOrganization, 
-  streamJobStatus,
-  type JobStreamController,
-} from "@/modules/organizations/api";
-import type { 
-  OrganizationListItem, 
-  UpdateOrganizationRequest, 
-  OrganizationDetail,
-  JobStatusEvent,
-} from "@/modules/organizations/types";
-import useAuthStore from "@/modules/auth/store/auth.store";
-import { CreateOrgDialog } from "@/components/organizations/dialogs/create-org-dialog";
-import { Plus, SearchX, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, PauseCircle, PlayCircle, Ban } from "lucide-react";
-import { useColorModeValue } from "@/components/ui/color-mode";
-import { formatDateShort } from "@/lib/utils/format-date";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import ViewOrgDialog from "@/components/organizations/dialogs/view-org-dialog";
+import {
+  Ban,
+  CheckCircle2,
+  Eye,
+  MoreVertical,
+  PauseCircle,
+  Pencil,
+  PlayCircle,
+  Plus,
+  SearchX,
+  XCircle,
+} from "lucide-react";
+import { AdminPageShell, PageHeader } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Column, CustomTable } from "@/components/ui/custom-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip } from "@/components/ui/tooltip";
+import { CreateOrgDialog } from "@/components/organizations/dialogs/create-org-dialog";
 import EditOrgDialog from "@/components/organizations/dialogs/edit-org-dialog";
 import { StatusChangeDialog, getValidActions, type StatusAction } from "@/components/organizations/dialogs/status-change-dialog";
+import ViewOrgDialog from "@/components/organizations/dialogs/view-org-dialog";
+import useAuthStore from "@/modules/auth/store/auth.store";
+import {
+  listOrganizations,
+  streamJobStatus,
+  updateOrganization,
+  type JobStreamController,
+} from "@/modules/organizations/api";
+import { useOrganisationHistory } from "@/modules/organizations/hooks";
+import type {
+  JobStatusEvent,
+  OrganizationDetail,
+  OrganizationListItem,
+  UpdateOrganizationRequest,
+} from "@/modules/organizations/types";
+import { formatDateShort } from "@/lib/utils/format-date";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Actions Cell Component (handles dialog state outside menu)
-// ─────────────────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 20;
 
-const ACTION_LABELS: Record<StatusAction, { icon: React.ElementType; label: string; color: string }> = {
-  approve: { icon: CheckCircle2, label: "Approve", color: "green.600" },
-  reject: { icon: XCircle, label: "Reject", color: "red.600" },
-  suspend: { icon: PauseCircle, label: "Suspend", color: "orange.600" },
-  reinstate: { icon: PlayCircle, label: "Reinstate", color: "green.600" },
-  deactivate: { icon: Ban, label: "Deactivate", color: "red.600" },
+type OrgRow = OrganizationListItem & { id: string };
+
+const ACTION_LABELS: Record<StatusAction, { icon: React.ElementType; label: string; variant?: "default" | "destructive" }> = {
+  approve: { icon: CheckCircle2, label: "Approve" },
+  reject: { icon: XCircle, label: "Reject", variant: "destructive" },
+  suspend: { icon: PauseCircle, label: "Suspend" },
+  reinstate: { icon: PlayCircle, label: "Reinstate" },
+  deactivate: { icon: Ban, label: "Deactivate", variant: "destructive" },
 };
 
-function ActionsCell({ org, onUpdate, onStatusChange }: { 
-  org: OrgRow; 
+const statusVariant: Record<OrgRow["status"], BadgeVariant> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "risk",
+  suspended: "warning",
+  deactivated: "secondary",
+  provisioning: "info",
+  failed: "risk",
+};
+
+const historyActionVariant: Partial<Record<string, BadgeVariant>> = {
+  created: "info",
+  approved: "success",
+  rejected: "risk",
+  suspended: "warning",
+  reinstated: "success",
+  status_changed: "primary-subtle",
+  field_changed: "secondary",
+  user_added: "info",
+  user_removed: "warning",
+  role_changed: "primary-subtle",
+  note_added: "secondary",
+  system_migration: "info",
+  deleted: "risk",
+};
+
+function ActionsCell({
+  org,
+  onUpdate,
+  onStatusChange,
+}: {
+  org: OrgRow;
   onUpdate: (id: string, payload: UpdateOrganizationRequest) => Promise<OrganizationDetail>;
   onStatusChange: () => void;
 }) {
@@ -52,100 +103,67 @@ function ActionsCell({ org, onUpdate, onStatusChange }: {
 
   return (
     <>
-      <HStack gap={0}>
+      <div className="flex items-center gap-1">
         <ViewOrgDialog
           org={org}
           trigger={
-            <IconButton 
-              aria-label="View" 
-              title="View" 
-              variant="ghost" 
-              size="sm"
-              rounded="md"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Eye size={16} />
-            </IconButton>
+            <Button variant="ghost" size="icon-sm" aria-label="View" title="View" onClick={(event) => event.stopPropagation()}>
+              <Eye />
+            </Button>
           }
         />
         <EditOrgDialog
           org={org}
           onUpdate={onUpdate}
           trigger={
-            <IconButton 
-              aria-label="Edit" 
-              title="Edit" 
-              variant="ghost" 
-              size="sm"
-              rounded="md"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Pencil size={16} />
-            </IconButton>
+            <Button variant="ghost" size="icon-sm" aria-label="Edit" title="Edit" onClick={(event) => event.stopPropagation()}>
+              <Pencil />
+            </Button>
           }
         />
 
-        {validActions.length > 0 && (
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <IconButton
-                aria-label="More actions"
-                variant="ghost"
-                size="sm"
-                rounded="md"
-                onClick={(e) => e.stopPropagation()}
+        {validActions.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="More actions" title="More actions" onClick={(event) => event.stopPropagation()}>
+                <MoreVertical />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuGroup>
+                {validActions.map((action) => {
+                  const config = ACTION_LABELS[action];
+                  const Icon = config.icon;
+                  return (
+                    <DropdownMenuItem
+                      key={action}
+                      variant={config.variant}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedAction(action);
+                      }}
+                    >
+                      <Icon />
+                      {config.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(event) => {
+                  event.stopPropagation();
+                  router.push(`/organizations/${org.organisation_id}`);
+                }}
               >
-                <MoreVertical size={16} />
-              </IconButton>
-            </Menu.Trigger>
-            <Portal>
-              <Menu.Positioner>
-                <Menu.Content minW="180px" rounded="lg" shadow="lg" p={1}>
-                  {validActions.map((action) => {
-                    const config = ACTION_LABELS[action];
-                    return (
-                      <Menu.Item 
-                        key={action} 
-                        value={action}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedAction(action);
-                        }}
-                        rounded="md"
-                        px={3}
-                        py={2}
-                      >
-                        <HStack gap={2}>
-                          <Icon as={config.icon} boxSize={4} color={config.color} />
-                          <Text fontSize="sm">{config.label}</Text>
-                        </HStack>
-                      </Menu.Item>
-                    );
-                  })}
-                  
-                  <Menu.Separator my={1} />
-                  
-                  <Menu.Item 
-                    value="view-details" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/organizations/${org.organisation_id}`);
-                    }}
-                    rounded="md"
-                    px={3}
-                    py={2}
-                  >
-                    <Text fontSize="sm">View Details</Text>
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Portal>
-          </Menu.Root>
-        )}
-      </HStack>
+                View details
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </div>
 
-      {/* Dialog rendered outside the menu */}
-      {selectedAction && (
+      {selectedAction ? (
         <StatusChangeDialog
           org={org}
           action={selectedAction}
@@ -156,50 +174,40 @@ function ActionsCell({ org, onUpdate, onStatusChange }: {
             onStatusChange();
           }}
         />
-      )}
+      ) : null}
     </>
   );
 }
 
-type OrgRow = OrganizationListItem & { id: string };
-
-// Refined status color palette
-const statusConfig: Record<OrgRow["status"], { color: string; bg: string; darkBg: string }> = {
-  pending: { color: "orange", bg: "orange.50", darkBg: "orange.900" },
-  approved: { color: "green", bg: "green.50", darkBg: "green.900" },
-  rejected: { color: "red", bg: "red.50", darkBg: "red.900" },
-  suspended: { color: "orange", bg: "orange.50", darkBg: "orange.900" },
-  deactivated: { color: "gray", bg: "gray.100", darkBg: "gray.800" },
-  provisioning: { color: "blue", bg: "blue.50", darkBg: "blue.900" },
-  failed: { color: "red", bg: "red.50", darkBg: "red.900" },
-};
-
-const historyActionPalette: Partial<Record<string, string>> = {
-  created: "blue",
-  approved: "green",
-  rejected: "red",
-  suspended: "orange",
-  reinstated: "green",
-  status_changed: "purple",
-  field_changed: "gray",
-  user_added: "blue",
-  user_removed: "orange",
-  role_changed: "purple",
-  note_added: "gray",
-  system_migration: "blue",
-  deleted: "red",
-};
+function TableLoadingState() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <Skeleton className="h-10 rounded-md" />
+      <div className="rounded-lg border border-border bg-surface-primary p-4 shadow-xs">
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-3">
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function OrganizationsPage() {
   const queryClient = useQueryClient();
   const router = useRouter();
-
-  // Cursor-based pagination state
-  const PAGE_SIZE = 20;
   const [cursor, setCursor] = useState<string | null>(null);
-  const [cursorHistory, setCursorHistory] = useState<string[]>([]); // stack of previous cursors
-
+  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [liveJobProgress, setLiveJobProgress] = useState<Map<string, JobStatusEvent>>(new Map());
+  const jobStreamsRef = useRef<Map<string, JobStreamController>>(new Map());
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["organizations", { limit: PAGE_SIZE, cursor }],
@@ -214,23 +222,22 @@ export default function OrganizationsPage() {
   });
 
   const rows: OrgRow[] = useMemo(
-    () => (data?.organizations || []).map((o) => ({ ...o, id: o.organisation_id })),
+    () => (data?.organizations || []).map((organization) => ({ ...organization, id: organization.organisation_id })),
     [data],
   );
 
-  // Default selection: pick the first org on the current page.
   useEffect(() => {
     if (rows.length === 0) {
       setSelectedOrgId(null);
       return;
     }
-    if (!selectedOrgId || !rows.some((r) => r.organisation_id === selectedOrgId)) {
+    if (!selectedOrgId || !rows.some((row) => row.organisation_id === selectedOrgId)) {
       setSelectedOrgId(rows[0].organisation_id);
     }
   }, [rows, selectedOrgId]);
 
   const selectedOrg = useMemo(
-    () => rows.find((r) => r.organisation_id === selectedOrgId) ?? null,
+    () => rows.find((row) => row.organisation_id === selectedOrgId) ?? null,
     [rows, selectedOrgId],
   );
 
@@ -241,26 +248,18 @@ export default function OrganizationsPage() {
     error: historyError,
   } = useOrganisationHistory(selectedOrgId ?? "", { limit: 20 });
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Live job progress via SSE
-  // ─────────────────────────────────────────────────────────────────────────────
-  
-  // Track live job updates (jobId -> latest status event)
-  const [liveJobProgress, setLiveJobProgress] = useState<Map<string, JobStatusEvent>>(new Map());
-  const jobStreamsRef = useRef<Map<string, JobStreamController>>(new Map());
-
-  // Find rows with active jobs that need streaming
-  const activeJobIds = useMemo(() => {
-    return rows
-      .filter((r) => r.active_job && (r.active_job.status === "pending" || r.active_job.status === "in_progress"))
-      .map((r) => r.active_job!.job_id);
-  }, [rows]);
+  const activeJobIds = useMemo(
+    () =>
+      rows
+        .filter((row) => row.active_job && (row.active_job.status === "pending" || row.active_job.status === "in_progress"))
+        .map((row) => row.active_job!.job_id),
+    [rows],
+  );
 
   useEffect(() => {
     const currentStreams = jobStreamsRef.current;
     const newJobIds = new Set(activeJobIds);
 
-    // Stop streams for jobs no longer in the list
     for (const [jobId, controller] of currentStreams.entries()) {
       if (!newJobIds.has(jobId)) {
         controller.abort();
@@ -268,13 +267,11 @@ export default function OrganizationsPage() {
       }
     }
 
-    // Start streams for new active jobs
     for (const jobId of activeJobIds) {
       if (currentStreams.has(jobId)) continue;
 
-      const streamUrl = `/organisations/jobs/${jobId}/stream`;
       const controller = streamJobStatus(
-        streamUrl,
+        `/organisations/jobs/${jobId}/stream`,
         () => useAuthStore.getState().access_token,
         {
           onStatus: (event: JobStatusEvent) => {
@@ -285,7 +282,6 @@ export default function OrganizationsPage() {
             });
           },
           onComplete: () => {
-            // Job finished - invalidate list to get updated org status
             currentStreams.delete(jobId);
             setLiveJobProgress((prev) => {
               const next = new Map(prev);
@@ -305,7 +301,6 @@ export default function OrganizationsPage() {
       currentStreams.set(jobId, controller);
     }
 
-    // Cleanup on unmount
     return () => {
       for (const controller of currentStreams.values()) {
         controller.abort();
@@ -314,33 +309,40 @@ export default function OrganizationsPage() {
     };
   }, [activeJobIds, queryClient]);
 
-  // Merge live progress into rows for display
-  const rowsWithLiveProgress: OrgRow[] = useMemo(() => {
-    return rows.map((row) => {
-      if (!row.active_job) return row;
-      const liveEvent = liveJobProgress.get(row.active_job.job_id);
-      if (!liveEvent) return row;
-      // Merge live data into active_job
-      return {
-        ...row,
-        active_job: {
-          ...row.active_job,
-          status: liveEvent.status,
-          progress: liveEvent.progress,
-          status_message: liveEvent.status_message,
-        },
-      };
-    });
-  }, [rows, liveJobProgress]);
+  const rowsWithLiveProgress: OrgRow[] = useMemo(
+    () =>
+      rows.map((row) => {
+        if (!row.active_job) return row;
+        const liveEvent = liveJobProgress.get(row.active_job.job_id);
+        if (!liveEvent) return row;
+        return {
+          ...row,
+          active_job: {
+            ...row.active_job,
+            status: liveEvent.status,
+            progress: liveEvent.progress,
+            status_message: liveEvent.status_message,
+          },
+        };
+      }),
+    [rows, liveJobProgress],
+  );
 
   const columns: Column<OrgRow>[] = [
     {
       header: "Organization",
       key: "organisation_name",
-      render: (o) => (
-        <Button variant="plain" onClick={() => router.push(`/organizations/${o.organisation_id}`)}>
-          {o.organisation_name}
-        </Button>
+      render: (organization) => (
+        <button
+          type="button"
+          className="font-semibold text-brand-primary hover:text-brand-hover"
+          onClick={(event) => {
+            event.stopPropagation();
+            router.push(`/organizations/${organization.organisation_id}`);
+          }}
+        >
+          {organization.organisation_name}
+        </button>
       ),
     },
     { header: "Country", key: "country" },
@@ -348,74 +350,26 @@ export default function OrganizationsPage() {
     {
       header: "Status",
       key: "status",
-      render: (o) => {
-        const hasActiveJob = o.active_job && (o.active_job.status === "in_progress" || o.active_job.status === "pending");
-        const progress = o.active_job?.progress ?? 0;
-        const statusMessage = o.active_job?.status_message ?? "Provisioning...";
-        const config = statusConfig[o.status];
-        
-        // For orgs without active jobs - just show status badge
+      render: (organization) => {
+        const hasActiveJob =
+          organization.active_job &&
+          (organization.active_job.status === "in_progress" || organization.active_job.status === "pending");
+        const progress = organization.active_job?.progress ?? 0;
+        const statusMessage = organization.active_job?.status_message ?? "Provisioning...";
+
         if (!hasActiveJob) {
-          return (
-            <Badge 
-              colorPalette={config.color} 
-              variant="subtle" 
-              rounded="full" 
-              px={3} 
-              py={1}
-              fontSize="xs"
-              fontWeight="semibold"
-              textTransform="capitalize"
-            >
-              {o.status}
-            </Badge>
-          );
+          return <Badge variant={statusVariant[organization.status]} className="capitalize">{organization.status}</Badge>;
         }
-        
-        // For orgs with active jobs - show status + animated progress indicator
+
         return (
           <Tooltip content={`${statusMessage} (${progress}%)`} positioning={{ placement: "top" }}>
-            <HStack gap={2}>
-              <Badge 
-                colorPalette={config.color} 
-                variant="subtle" 
-                rounded="full" 
-                px={3} 
-                py={1}
-                fontSize="xs"
-                fontWeight="semibold"
-                textTransform="capitalize"
-              >
-                {o.status}
-              </Badge>
-              <HStack 
-                gap={1.5} 
-                bg="blue.50" 
-                _dark={{ bg: "blue.900", borderColor: "blue.700" }} 
-                px={2.5} 
-                py={1} 
-                rounded="full"
-                borderWidth="1px"
-                borderColor="blue.200"
-              >
-                <Box 
-                  w="6px" 
-                  h="6px" 
-                  rounded="full" 
-                  bg="blue.500"
-                  css={{
-                    animation: "pulse 1.5s ease-in-out infinite",
-                    "@keyframes pulse": {
-                      "0%, 100%": { opacity: 1, transform: "scale(1)" },
-                      "50%": { opacity: 0.5, transform: "scale(0.8)" },
-                    },
-                  }}
-                />
-                <Text fontSize="xs" fontWeight="semibold" color="blue.600" _dark={{ color: "blue.300" }}>
-                  {progress}%
-                </Text>
-              </HStack>
-            </HStack>
+            <div className="flex items-center gap-2">
+              <Badge variant={statusVariant[organization.status]} className="capitalize">{organization.status}</Badge>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-signal-info/20 bg-signal-info/10 px-2 py-0.5 text-xs font-semibold text-signal-info">
+                <span className="size-1.5 animate-pulse rounded-full bg-signal-info" />
+                {progress}%
+              </span>
+            </div>
           </Tooltip>
         );
       },
@@ -423,18 +377,14 @@ export default function OrganizationsPage() {
     {
       header: "Created",
       key: "created_at",
-      render: (o) => (
-        <Text fontSize="sm" color={muted}>
-          {formatDateShort(o.created_at)}
-        </Text>
-      ),
+      render: (organization) => <span className="text-sm text-fg-secondary">{formatDateShort(organization.created_at)}</span>,
     },
     {
       header: "Actions",
       key: "actions" as keyof OrgRow,
-      render: (o) => (
-        <ActionsCell 
-          org={o} 
+      render: (organization) => (
+        <ActionsCell
+          org={organization}
           onUpdate={(id, payload) => updateOrgMutation.mutateAsync({ id, payload })}
           onStatusChange={() => queryClient.invalidateQueries({ queryKey: ["organizations"] })}
         />
@@ -442,123 +392,59 @@ export default function OrganizationsPage() {
     },
   ];
 
-  const cardBg = useColorModeValue("white", "gray.900");
-  const cardBorder = useColorModeValue("gray.200", "gray.700");
-  const muted = useColorModeValue("gray.600", "gray.400");
-  const iconBg = useColorModeValue("purple.50", "purple.900");
-  const iconColor = useColorModeValue("purple.600", "purple.300");
-  const panelBg = useColorModeValue("white", "gray.900");
-  const panelBorder = useColorModeValue("gray.200", "gray.700");
-
   return (
-    <Box w="full">
+    <div className="w-full">
       <PageHeader
         title="Organizations"
-        breadcrumbs={[
-          { label: "home", href: "/" },
-          { label: "organizations" },
-        ]}
+        breadcrumbs={[{ label: "home", href: "/" }, { label: "organizations" }]}
         backOnSubPathOf="organizations"
         actions={
           <CreateOrgDialog
             trigger={
-              <Button
-                bg={"purple.600"}
-                borderRadius={"6px"}
-                fontSize={"sm"}
-                fontWeight={"semibold"}
-                color={"white"}
-                _hover={{ bg: "purple.500" }}
-                padding={2}
-              >
-                <Plus /> Add New Org
+              <Button>
+                <Plus data-icon="inline-start" />
+                Add New Org
               </Button>
             }
           />
         }
       />
 
-      <Box w="full" maxW="7xl" mx="auto" px={{ base: 4, md: 10 }} mt={6}>
-        {isLoading ? (
-          <Stack w="full" maxW="6xl" mt={6} gap={4}>
-            <Skeleton height="40px" rounded="md" />
-            <Box borderWidth="1px" borderColor={cardBorder} rounded="lg" p={4}>
-              <Stack gap={3}>
-                {["a", "b", "c", "d", "e", "f"].map((key) => (
-                  <HStack key={key} gap={3}>
-                    <Skeleton height="24px" flex={2} rounded="md" />
-                    <Skeleton height="24px" flex={1} rounded="md" />
-                    <Skeleton height="24px" flex={1} rounded="md" />
-                    <Skeleton height="24px" flex={1} rounded="md" />
-                    <Skeleton height="24px" flex={1} rounded="md" />
-                  </HStack>
-                ))}
-              </Stack>
-            </Box>
-          </Stack>
-        ) : isError ? (
-          <Stack align="center" justify="center" py={16} gap={4} textAlign="center">
-            <Text fontSize="lg" color="red.500">
-              {error?.message || "Failed to load organizations"}
-            </Text>
+      <AdminPageShell>
+        {isLoading ? <TableLoadingState /> : null}
+
+        {isError ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <p className="text-lg font-medium text-destructive">{error?.message || "Failed to load organizations"}</p>
             <Button onClick={() => refetch()}>Retry</Button>
-          </Stack>
-        ) : rows.length === 0 ? (
-          <Stack align="center" justify="center" py={16} gap={5} textAlign="center" w="full">
-            <Box
-              bg={cardBg}
-              borderWidth="1px"
-              borderColor={cardBorder}
-              rounded="lg"
-              p={10}
-              maxW="lg"
-              w="full"
-              boxShadow="sm"
-            >
-              <Stack align="center" gap={3}>
-                <Box
-                  bg={iconBg}
-                  color={iconColor}
-                  rounded="full"
-                  boxSize={16}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Icon as={SearchX} boxSize={8} />
-                </Box>
-                <Text fontSize="xl" fontWeight="semibold">No organizations found</Text>
-                <Text fontSize="sm" color={muted} maxW="md">
-                  Get started by creating your first organization. You can add details like website links and logo.
-                </Text>
-                <CreateOrgDialog
-                  trigger={
-                    <Button
-                      mt={2}
-                      bg={"purple.600"}
-                      borderRadius={"6px"}
-                      fontSize={"sm"}
-                      fontWeight={"semibold"}
-                      color={"white"}
-                      _hover={{ bg: "purple.500" }}
-                      padding={2}
-                    >
-                      <Plus /> Create a new organization
-                    </Button>
-                  }
-                />
-              </Stack>
-            </Box>
-          </Stack>
-        ) : (
-          <Stack
-            w="full"
-            gap={6}
-            direction={{ base: "column", lg: "row" }}
-            align={{ base: "stretch", lg: "flex-start" }}
-          >
-            {/* Left: table */}
-            <Stack flex="1" minW={0} gap={6}>
+          </div>
+        ) : null}
+
+        {!isLoading && !isError && rows.length === 0 ? (
+          <div className="flex w-full justify-center py-16 text-center">
+            <div className="flex w-full max-w-lg flex-col items-center gap-3 rounded-lg border border-border bg-surface-primary p-10 shadow-xs">
+              <div className="grid size-16 place-items-center rounded-full bg-brand-subtle text-brand-primary">
+                <SearchX />
+              </div>
+              <p className="text-xl font-semibold text-fg-primary">No organizations found</p>
+              <p className="max-w-md text-sm text-fg-secondary">
+                Get started by creating your first organization. You can add details like website links and logo.
+              </p>
+              <CreateOrgDialog
+                trigger={
+                  <Button className="mt-2">
+                    <Plus data-icon="inline-start" />
+                    Create a new organization
+                  </Button>
+                }
+              />
+            </div>
+          </div>
+        ) : null}
+
+        {!isLoading && !isError && rows.length > 0 ? (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <div className="flex min-w-0 flex-col gap-6">
               <CustomTable
                 data={rowsWithLiveProgress}
                 columns={columns}
@@ -568,18 +454,17 @@ export default function OrganizationsPage() {
                 onRowClick={(row) => setSelectedOrgId(String(row.id))}
               />
 
-              {/* Cursor-based pagination controls */}
-              <HStack justify="space-between" w="full">
-                <Text fontSize="sm" color={muted}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-fg-secondary">
                   Showing {rowsWithLiveProgress.length} organization{rowsWithLiveProgress.length !== 1 ? "s" : ""}
-                </Text>
-                <HStack gap={2}>
+                </p>
+                <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
                       const prev = cursorHistory[cursorHistory.length - 1] ?? null;
-                      setCursorHistory((h) => h.slice(0, -1));
+                      setCursorHistory((history) => history.slice(0, -1));
                       setCursor(prev === "__first__" ? null : prev);
                     }}
                     disabled={cursorHistory.length === 0 || isFetching}
@@ -591,7 +476,7 @@ export default function OrganizationsPage() {
                     variant="outline"
                     onClick={() => {
                       if (data?.cursor) {
-                        setCursorHistory((h) => [...h, cursor ?? "__first__"]);
+                        setCursorHistory((history) => [...history, cursor ?? "__first__"]);
                         setCursor(data.cursor);
                       }
                     }}
@@ -599,110 +484,53 @@ export default function OrganizationsPage() {
                   >
                     Next
                   </Button>
-                </HStack>
-              </HStack>
-            </Stack>
+                </div>
+              </div>
+            </div>
 
-            {/* Right: history */}
-            <Box
-              w={{ base: "full", lg: "360px" }}
-              bg={panelBg}
-              borderWidth="1px"
-              borderColor={panelBorder}
-              rounded="lg"
-              overflow="hidden"
-              position={{ base: "static", lg: "sticky" }}
-              top={{ base: "auto", lg: 4 }}
-            >
-              <Box p={4}>
-                <Stack gap={1}>
-                  <Text fontSize="md" fontWeight="semibold">
-                    History
-                  </Text>
-                  <HStack justify="space-between" align="center" gap={3}>
-                    <Text fontSize="sm" color={muted} lineClamp={1}>
+            <aside className="overflow-hidden rounded-lg border border-border bg-surface-primary shadow-xs lg:sticky lg:top-4">
+              <div className="p-4">
+                <div className="flex flex-col gap-1">
+                  <p className="text-base font-semibold text-fg-primary">History</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-sm text-fg-secondary">
                       {selectedOrg ? selectedOrg.organisation_name : "Select an organization"}
-                    </Text>
-                    {selectedOrg ? (
-                      <Badge
-                        colorPalette={statusConfig[selectedOrg.status].color}
-                        variant="subtle"
-                        rounded="full"
-                        px={2}
-                        py={0.5}
-                        textTransform="capitalize"
-                        flexShrink={0}
-                      >
-                        {selectedOrg.status}
-                      </Badge>
-                    ) : null}
-                  </HStack>
-                </Stack>
-              </Box>
+                    </p>
+                    {selectedOrg ? <Badge variant={statusVariant[selectedOrg.status]} className="capitalize">{selectedOrg.status}</Badge> : null}
+                  </div>
+                </div>
+              </div>
               <Separator />
-
-              <Box p={4}>
+              <div className="p-4">
                 {isHistoryLoading ? (
-                  <Stack gap={3}>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} height="64px" rounded="md" />
-                    ))}
-                  </Stack>
+                  <div className="flex flex-col gap-3">
+                    {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-md" />)}
+                  </div>
                 ) : isHistoryError ? (
-                  <Text fontSize="sm" color="red.500">
-                    {historyError?.message || "Failed to load history"}
-                  </Text>
+                  <p className="text-sm text-destructive">{historyError?.message || "Failed to load history"}</p>
                 ) : !historyData || historyData.history.length === 0 ? (
-                  <Text fontSize="sm" color={muted}>
-                    No history available.
-                  </Text>
+                  <p className="text-sm text-fg-secondary">No history available.</p>
                 ) : (
-                  <Stack
-                    gap={2}
-                    maxH={{ base: "auto", lg: "560px" }}
-                    overflowY={{ base: "visible", lg: "auto" }}
-                    pe={{ base: 0, lg: 1 }}
-                  >
-                    {historyData.history.map((h) => (
-                      <Box
-                        key={h.id}
-                        borderWidth="1px"
-                        borderColor={panelBorder}
-                        rounded="md"
-                        p={3}
-                      >
-                        <HStack justify="space-between" align="center" gap={3}>
-                          <Badge
-                            colorPalette={historyActionPalette[h.action] ?? "gray"}
-                            variant="subtle"
-                            rounded="full"
-                            px={2}
-                            py={0.5}
-                            textTransform="capitalize"
-                          >
-                            {h.action.replaceAll("_", " ")}
+                  <div className="flex max-h-[560px] flex-col gap-2 overflow-y-auto pr-1">
+                    {historyData.history.map((history) => (
+                      <div key={history.id} className="rounded-md border border-border bg-surface-primary p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <Badge variant={historyActionVariant[history.action] ?? "secondary"} className="capitalize">
+                            {history.action.replaceAll("_", " ")}
                           </Badge>
-                          <Text fontSize="xs" color={muted} whiteSpace="nowrap">
-                            {formatDateShort(h.created_at)}
-                          </Text>
-                        </HStack>
-                        <Text fontSize="sm" mt={2} color={h.note ? "inherit" : muted}>
-                          {h.note || "—"}
-                        </Text>
-                        {h.actor_admin_name ? (
-                          <Text fontSize="xs" color={muted} mt={1}>
-                            by {h.actor_admin_name}
-                          </Text>
-                        ) : null}
-                      </Box>
+                          <span className="whitespace-nowrap text-xs text-fg-secondary">{formatDateShort(history.created_at)}</span>
+                        </div>
+                        <p className="mt-2 text-sm text-fg-primary">{history.note || "-"}</p>
+                        {history.actor_admin_name ? <p className="mt-1 text-xs text-fg-secondary">by {history.actor_admin_name}</p> : null}
+                      </div>
                     ))}
-                  </Stack>
+                  </div>
                 )}
-              </Box>
-            </Box>
-          </Stack>
-        )}
-      </Box>
-    </Box>
+              </div>
+            </aside>
+          </div>
+        ) : null}
+      </AdminPageShell>
+    </div>
   );
 }

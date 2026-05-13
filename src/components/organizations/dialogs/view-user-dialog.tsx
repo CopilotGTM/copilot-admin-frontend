@@ -1,87 +1,82 @@
 "use client";
 
 import React from "react";
-import { Button, CloseButton, Dialog, Portal, Text, Box, Separator, Stack, Badge } from "@chakra-ui/react";
-import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import type { UserListItem, SupabaseUserStatus, AdminUserStatus } from "@/modules/users/types";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import type { AdminUserStatus, SupabaseUserStatus, UserListItem } from "@/modules/users/types";
 
 export interface ViewUserDialogProps {
   trigger: React.ReactNode;
   user: UserListItem;
 }
 
-const supabaseStatusColor: Record<SupabaseUserStatus, string> = {
-  ACTIVE: "green",
-  INACTIVE: "gray",
-  PASSWORD_CHANGE_REQUIRED: "yellow",
+const supabaseStatusVariant: Record<SupabaseUserStatus, BadgeVariant> = {
+  ACTIVE: "success",
+  INACTIVE: "secondary",
+  PASSWORD_CHANGE_REQUIRED: "warning",
 };
 
-const adminStatusColor: Record<AdminUserStatus, string> = {
-  pending: "yellow",
-  approved: "green",
-  rejected: "red",
-  suspended: "orange",
-  deactivated: "gray",
+const adminStatusVariant: Record<AdminUserStatus, BadgeVariant> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "risk",
+  suspended: "warning",
+  deactivated: "secondary",
 };
+
+function DetailItem({ label, value }: { label: string; value?: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+      <span className="text-xs font-semibold uppercase text-fg-muted">{label}</span>
+      <span className="text-sm font-medium text-fg-primary">{value || "-"}</span>
+    </div>
+  );
+}
 
 export default function ViewUserDialog({ trigger, user }: Readonly<ViewUserDialogProps>) {
   return (
-    <Dialog.Root placement="center" scrollBehavior="inside" size={"md"}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content p={6} rounded="xl" boxShadow="lg">
-            <Dialog.CloseTrigger asChild>
-              <CloseButton position="absolute" top="8px" right="8px" rounded="full" />
-            </Dialog.CloseTrigger>
+    <Dialog>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="gap-0 p-0 sm:max-w-2xl">
+        <DialogHeader className="px-6 py-5">
+          <DialogTitle>User details</DialogTitle>
+          <DialogDescription>Review identity, role, and access status for this user.</DialogDescription>
+        </DialogHeader>
+        <Separator />
 
-            <Dialog.Header>
-              <Dialog.Title fontSize="lg" fontWeight="bold">User details</Dialog.Title>
-            </Dialog.Header>
+        <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+          <DetailItem label="Name" value={`${user.first_name} ${user.last_name}`} />
+          <DetailItem label="Email" value={user.email} />
+          <DetailItem label="Role" value={user.organisation_role} />
+          <DetailItem label="Job title" value={user.job_title} />
+          <div className="md:col-span-2">
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+              <span className="text-xs font-semibold uppercase text-fg-muted">Status</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={supabaseStatusVariant[user.status]} className="capitalize">{user.status}</Badge>
+                <Badge variant={adminStatusVariant[user.admin_status]} className="capitalize">{user.admin_status}</Badge>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            <Separator />
-
-            <Dialog.Body>
-              <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-                <FormControl>
-                  <FormLabel>Name</FormLabel>
-                  <Text fontWeight="semibold">{user.first_name} {user.last_name}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Email</FormLabel>
-                  <Text fontWeight="semibold">{user.email}</Text>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Role</FormLabel>
-                  <Text fontWeight="semibold">{user.organisation_role}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Job title</FormLabel>
-                  <Text fontWeight="semibold">{user.job_title}</Text>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Status</FormLabel>
-                  <Stack direction="row" gap={2}>
-                    <Badge variant="subtle" colorPalette={supabaseStatusColor[user.status]}>{user.status}</Badge>
-                    <Badge variant="subtle" colorPalette={adminStatusColor[user.admin_status]}>{user.admin_status}</Badge>
-                  </Stack>
-                </FormControl>
-              </Box>
-            </Dialog.Body>
-
-            <Separator />
-
-            <Dialog.Footer>
-              <Dialog.ActionTrigger asChild>
-                <Button variant="outline">Close</Button>
-              </Dialog.ActionTrigger>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

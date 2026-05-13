@@ -1,29 +1,25 @@
 "use client";
 
 import React from "react";
-import {
-  Button,
-  CloseButton,
-  Dialog,
-  Portal,
-  Input,
-  Text,
-  Box,
-  Separator,
-  InputGroup,
-  Icon,
-  createListCollection,
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem,
-} from "@chakra-ui/react";
-import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Briefcase, IdCard, Mail, Shield, User as UserIcon } from "lucide-react";
+import { Controller, useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { createUserSchema, type CreateUserInput } from "@/modules/users/schemas";
-import { Mail, User as UserIcon, Briefcase, IdCard, Shield } from "lucide-react";
 
 export interface CreateUserDialogProps {
   trigger: React.ReactNode;
@@ -31,7 +27,38 @@ export interface CreateUserDialogProps {
   onCreate: (values: CreateUserInput) => Promise<void>;
 }
 
+const roleOptions = [
+  { label: "Member", value: "member", description: "Standard user access" },
+  { label: "Admin", value: "admin", description: "Full administrative access" },
+] as const;
+
+function Field({
+  label,
+  icon: Icon,
+  error,
+  children,
+  className,
+}: {
+  label: string;
+  icon: React.ElementType;
+  error?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={className ? `flex flex-col gap-2 text-sm font-medium text-fg-secondary ${className}` : "flex flex-col gap-2 text-sm font-medium text-fg-secondary"}>
+      {label}
+      <span className="relative block">
+        <Icon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
+        {children}
+      </span>
+      {error ? <span className="text-xs font-normal text-signal-risk">{error}</span> : null}
+    </label>
+  );
+}
+
 export default function CreateUserDialog({ trigger, organisationId, onCreate }: Readonly<CreateUserDialogProps>) {
+  const [open, setOpen] = React.useState(false);
   const {
     register,
     handleSubmit,
@@ -52,15 +79,7 @@ export default function CreateUserDialog({ trigger, organisationId, onCreate }: 
     },
   });
 
-  const roleCollection = createListCollection({
-    items: [
-      { label: "Member", value: "member", description: "Standard user access" },
-      { label: "Admin", value: "admin", description: "Full administrative access" },
-    ],
-  });
-
-  const onSubmit = async (values: CreateUserInput) => {
-    await onCreate(values);
+  const resetForm = () => {
     reset({
       first_name: "",
       last_name: "",
@@ -72,132 +91,94 @@ export default function CreateUserDialog({ trigger, organisationId, onCreate }: 
     });
   };
 
-  const formId = "create-user-form";
+  const onSubmit = handleSubmit(async (values) => {
+    await onCreate(values);
+    resetForm();
+    setOpen(false);
+  });
 
   return (
-    <Dialog.Root placement="center" scrollBehavior="inside" size={"md"}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content rounded="xl" boxShadow="lg">
-            <Dialog.CloseTrigger asChild>
-              <CloseButton position="absolute" top="8px" right="8px" rounded="full" />
-            </Dialog.CloseTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="gap-0 p-0 sm:max-w-2xl">
+        <DialogHeader className="px-6 py-5">
+          <DialogTitle>Add user</DialogTitle>
+          <DialogDescription>Create a user in this organization and assign their app access role.</DialogDescription>
+        </DialogHeader>
+        <Separator />
 
-            <Dialog.Header>
-              <Dialog.Title fontSize="lg" fontWeight="bold">Add user</Dialog.Title>
-            </Dialog.Header>
+        <form onSubmit={onSubmit}>
+          <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+            <Field label="First name" icon={UserIcon} error={errors.first_name?.message}>
+              <Input className="pl-9" placeholder="Alice" aria-invalid={!!errors.first_name} {...register("first_name")} />
+            </Field>
 
-            <Separator />
+            <Field label="Last name" icon={UserIcon} error={errors.last_name?.message}>
+              <Input className="pl-9" placeholder="Doe" aria-invalid={!!errors.last_name} {...register("last_name")} />
+            </Field>
 
-            <Dialog.Body>
-              <form id={formId} onSubmit={handleSubmit(onSubmit)}>
-                <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-                  <FormControl isRequired>
-                    <FormLabel>First name</FormLabel>
-                    <InputGroup
-                      startElement={<Icon as={UserIcon} color="gray.400" boxSize={4} ms={3} />}
-                    >
-                      <Input rounded="md" ps={10} placeholder="Alice" {...register("first_name")} />
-                    </InputGroup>
-                    {errors.first_name && <Text color="red.500" fontSize="xs">{errors.first_name.message}</Text>}
-                  </FormControl>
+            <Field label="Email" icon={Mail} error={errors.email?.message} className="md:col-span-2">
+              <Input className="pl-9" type="email" placeholder="user@example.com" aria-invalid={!!errors.email} {...register("email")} />
+            </Field>
 
-                  <FormControl isRequired>
-                    <FormLabel>Last name</FormLabel>
-                    <InputGroup
-                      startElement={<Icon as={UserIcon} color="gray.400" boxSize={4} ms={3} />}
-                    >
-                      <Input rounded="md" ps={10} placeholder="Doe" {...register("last_name")} />
-                    </InputGroup>
-                    {errors.last_name && <Text color="red.500" fontSize="xs">{errors.last_name.message}</Text>}
-                  </FormControl>
+            <Controller
+              control={control}
+              name="user_role"
+              render={({ field }) => (
+                <label className="flex flex-col gap-2 text-sm font-medium text-fg-secondary">
+                  App role
+                  <span className="relative block">
+                    <Shield className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
+                    <Select value={field.value ?? "member"} onValueChange={field.onChange} name={field.name}>
+                      <SelectTrigger className="pl-9" aria-invalid={!!errors.user_role}>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {roleOptions.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              <span className="flex flex-col">
+                                <span>{role.label}</span>
+                                <span className="text-xs font-normal text-fg-muted">{role.description}</span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </span>
+                  {errors.user_role ? <span className="text-xs font-normal text-signal-risk">{errors.user_role.message}</span> : null}
+                </label>
+              )}
+            />
 
-                  <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                    <FormControl isRequired>
-                      <FormLabel>Email</FormLabel>
-                      <InputGroup
-                        startElement={<Icon as={Mail} color="gray.400" boxSize={4} ms={3} />}
-                      >
-                        <Input rounded="md" ps={10} type="email" placeholder="user@example.com" {...register("email")} />
-                      </InputGroup>
-                      {errors.email && <Text color="red.500" fontSize="xs">{errors.email.message}</Text>}
-                    </FormControl>
-                  </Box>
+            <Field label="Job title" icon={Briefcase} error={errors.job_title?.message}>
+              <Input className="pl-9" placeholder="Product Manager" aria-invalid={!!errors.job_title} {...register("job_title")} />
+            </Field>
 
-                  <Controller
-                    control={control}
-                    name="user_role"
-                    render={({ field }) => (
-                      <FormControl isRequired>
-                        <FormLabel>App role</FormLabel>
-                        <SelectRoot
-                          collection={roleCollection}
-                          name={field.name}
-                          value={field.value ? [field.value] : []}
-                          onValueChange={(details: { value: string[] }) => field.onChange(details.value[0])}
-                        >
-                          <SelectTrigger ps={3}>
-                            <Box display="flex" alignItems="center" gap={2} flex={1}>
-                              <Icon as={Shield} color="gray.400" boxSize={4} flexShrink={0} />
-                              <SelectValueText placeholder="Select role" />
-                            </Box>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roleCollection.items.map((role) => (
-                              <SelectItem item={role} key={role.value} px={3} py={2}>
-                                <Box>
-                                  <Text fontWeight="medium">{role.label}</Text>
-                                  <Text fontSize="xs" color="gray.500">{role.description}</Text>
-                                </Box>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </SelectRoot>
-                        {errors.user_role && <Text color="red.500" fontSize="xs">{errors.user_role.message}</Text>}
-                      </FormControl>
-                    )}
-                  />
+            <Field label="Organization role" icon={IdCard} error={errors.organisation_role?.message} className="md:col-span-2">
+              <Input
+                className="pl-9"
+                placeholder="Project Owner"
+                aria-invalid={!!errors.organisation_role}
+                {...register("organisation_role")}
+              />
+            </Field>
+          </div>
 
-                  <FormControl>
-                    <FormLabel>Job title (optional)</FormLabel>
-                    <InputGroup
-                      startElement={<Icon as={Briefcase} color="gray.400" boxSize={4} ms={3} />}
-                    >
-                      <Input rounded="md" ps={10} placeholder="Product Manager" {...register("job_title")} />
-                    </InputGroup>
-                    {errors.job_title && <Text color="red.500" fontSize="xs">{errors.job_title.message}</Text>}
-                  </FormControl>
-
-                  <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                    <FormControl isRequired>
-                      <FormLabel>Organization role</FormLabel>
-                      <InputGroup
-                        startElement={<Icon as={IdCard} color="gray.400" boxSize={4} ms={3} />}
-                      >
-                        <Input rounded="md" ps={10} placeholder="Project Owner" {...register("organisation_role")} />
-                      </InputGroup>
-                      {errors.organisation_role && <Text color="red.500" fontSize="xs">{errors.organisation_role.message}</Text>}
-                    </FormControl>
-                  </Box>
-                </Box>
-              </form>
-            </Dialog.Body>
-
-            <Separator />
-
-            <Dialog.Footer>
-              <Dialog.ActionTrigger asChild>
-                <Button variant="outline">Cancel</Button>
-              </Dialog.ActionTrigger>
-              <Button type="submit" form={formId} bg="purple.600" color="white" _hover={{ bg: "purple.500" }} disabled={!isValid} loading={isSubmitting}>
-                Create user
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancel
               </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+            </DialogClose>
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {isSubmitting ? <Spinner data-icon="inline-start" size="sm" /> : null}
+              Create user
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

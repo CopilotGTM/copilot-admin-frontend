@@ -1,31 +1,555 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@source not "../../docs";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   CopilotGTM Design System Tokens
+   Complete token set powering the Tailwind theme and all component styles.
+   Dark mode values swap automatically via the .dark class on <html>.
+
+   Brand primary: #805AD5 (purple.500)
+   Brand scale: Purple palette
+   ============================================================================ */
+
+@theme inline {
+  /* ---- shadcn bridge (required for shadcn components) ---- */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* ---- Surface tokens ---- */
+  --color-surface-primary: var(--color-surface-primary);
+  --color-surface-secondary: var(--color-surface-secondary);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-surface-subtle: var(--color-surface-subtle);
+  --color-surface-inverted: var(--color-surface-inverted);
+  --color-surface-hover: var(--color-surface-hover);
+  --color-surface-active: var(--color-surface-active);
+  --color-surface-selected: var(--color-surface-selected);
+  --color-surface-disabled: var(--color-surface-disabled);
+
+  /* ---- Foreground tokens ---- */
+  --color-fg-primary: var(--color-fg-primary);
+  --color-fg-secondary: var(--color-fg-secondary);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-fg-inverted: var(--color-fg-inverted);
+  --color-fg-disabled: var(--color-fg-disabled);
+  --color-fg-placeholder: var(--color-fg-placeholder);
+  --color-fg-link: var(--color-fg-link);
+  --color-fg-link-hover: var(--color-fg-link-hover);
+  --color-fg-success: var(--color-fg-success);
+  --color-fg-info: var(--color-fg-info);
+  --color-fg-warning: var(--color-fg-warning);
+  --color-fg-error: var(--color-fg-error);
+
+  /* ---- Brand tokens ---- */
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-hover: var(--color-brand-hover);
+  --color-brand-active: var(--color-brand-active);
+  --color-brand-subtle: var(--color-brand-subtle);
+  --color-brand-on-primary: var(--color-brand-on-primary);
+
+  /* ---- Border tokens ---- */
+  --color-border: var(--color-border-default);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-emphasized: var(--color-border-emphasized);
+  --color-border-hover: var(--color-border-hover);
+  --color-border-focus: var(--color-border-focus);
+  --color-border-active: var(--color-border-active);
+  --color-border-disabled: var(--color-border-disabled);
+  --color-border-success: var(--color-border-success);
+  --color-border-info: var(--color-border-info);
+  --color-border-warning: var(--color-border-warning);
+  --color-border-error: var(--color-border-error);
+
+  /* ---- Signal tokens ---- */
+  --color-signal-success: var(--color-signal-success);
+  --color-signal-warning: var(--color-signal-warning);
+  --color-signal-risk: var(--color-signal-risk);
+  --color-signal-info: var(--color-signal-info);
+
+  /* ---- Status background tokens ---- */
+  --color-bg-success: var(--color-bg-success);
+  --color-bg-success-subtle: var(--color-bg-success-subtle);
+  --color-bg-info: var(--color-bg-info);
+  --color-bg-info-subtle: var(--color-bg-info-subtle);
+  --color-bg-warning: var(--color-bg-warning);
+  --color-bg-warning-subtle: var(--color-bg-warning-subtle);
+  --color-bg-error: var(--color-bg-error);
+  --color-bg-error-subtle: var(--color-bg-error-subtle);
+
+  /* ---- Input background tokens ---- */
+  --color-bg-input: var(--color-bg-input);
+  --color-bg-input-hover: var(--color-bg-input-hover);
+  --color-bg-input-disabled: var(--color-bg-input-disabled);
+
+  /* ---- Avatar tokens ---- */
+  --color-avatar-deal: var(--color-avatar-deal);
+  --color-avatar-filter: var(--color-avatar-filter);
+
+  /* ---- Source-branded tokens ---- */
+  --color-source-teams: var(--color-source-teams);
+  --color-source-slack: var(--color-source-slack);
+  --color-source-gmail: var(--color-source-gmail);
+  --color-source-hubspot: var(--color-source-hubspot);
+
+  /* ---- Chart tokens ---- */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--color-chart-6);
+  --color-chart-7: var(--color-chart-7);
+  --color-chart-8: var(--color-chart-8);
+
+  /* ---- Sidebar tokens ---- */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ---- Radius tokens ---- */
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ---- Shadow tokens ---- */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-card-elevated: var(--shadow-card-elevated);
+  --shadow-dropdown: var(--shadow-dropdown);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-popover: var(--shadow-popover);
+  --shadow-tooltip: var(--shadow-tooltip);
+  --shadow-toast: var(--shadow-toast);
+  --shadow-focus: var(--shadow-focus);
+  --shadow-focus-visible: var(--shadow-focus-visible);
+  --shadow-input-focus: var(--shadow-input-focus);
+  --shadow-input-error: var(--shadow-input-error);
+
+  /* ---- Font tokens ---- */
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+
+  /* ---- Z-index tokens (design system scale) ---- */
+  --z-base: 0;
+  --z-dropdown: 50;
+  --z-sticky: 100;
+  --z-overlay: 150;
+  --z-modal: 200;
+  --z-popover: 300;
+  --z-tooltip: 400;
+  --z-toast: 500;
+
+  /* ---- Font-size tokens (extending Tailwind defaults) ---- */
+  --font-size-2xs: 0.625rem;
+  --font-size-2xs--line-height: 0.875rem;
+
+  /* ---- Breakpoints pinned to px so responsive classes don't drift
+     when the root font-size is scaled for density (see html rule below). */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* ============================================================================
+   Light Mode Token Values
+   ============================================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- Layout offset tokens (measured via Playwright) ---- */
+  --layout-deal-section-offset: 200px;
+  --layout-deal-nested-offset: 320px;
+  --layout-timeline-offset: 220px;
+  --layout-kb-offset: 160px;
+  --layout-kb-assets-offset: 180px;
+  --layout-modal-max-h: 90dvh;
+  --layout-modal-max-h-sm: 80dvh;
+
+  /* ---- Surface (gray scale, blue-tinted) ---- */
+  --color-surface-primary: #ffffff;
+  --color-surface-secondary: #FEFEFE;
+  --color-surface-elevated: #ffffff;
+  --color-surface-muted: #EDF2F7;
+  --color-surface-subtle: #F7FAFC;
+  --color-surface-inverted: #1A202C;
+  --color-surface-hover: #F7FAFC;
+  --color-surface-active: #EDF2F7;
+  --color-surface-selected: #FAF5FF;
+  --color-surface-disabled: #EDF2F7;
+
+  /* ---- Foreground (gray scale) ---- */
+  --color-fg-primary: #1A202C;
+  --color-fg-secondary: #4A5568;
+  --color-fg-muted: #718096;
+  --color-fg-inverted: #ffffff;
+  --color-fg-disabled: #A0AEC0;
+  --color-fg-placeholder: #A0AEC0;
+  --color-fg-link: #3182CE;
+  --color-fg-link-hover: #2B6CB0;
+  --color-fg-success: #2F855A;
+  --color-fg-info: #2B6CB0;
+  --color-fg-warning: #C05621;
+  --color-fg-error: #C53030;
+
+  /* ---- Border (gray scale) ---- */
+  --color-border-default: #E2E8F0;
+  --color-border-subtle: #EDF2F7;
+  --color-border-emphasized: #CBD5E0;
+  --color-border-hover: #CBD5E0;
+  --color-border-focus: #805AD5;
+  --color-border-active: #6B46C1;
+  --color-border-disabled: #E2E8F0;
+  --color-border-success: #9AE6B4;
+  --color-border-info: #90CDF4;
+  --color-border-warning: #FBD38D;
+  --color-border-error: #FEB2B2;
+
+  /* ---- Brand (purple scale, anchored on purple.500 = #805AD5) ---- */
+  --color-brand-primary: #805AD5;
+  --color-brand-hover: #6B46C1;
+  --color-brand-active: #553C9A;
+  --color-brand-subtle: #FAF5FF;
+  --color-brand-on-primary: #ffffff;
+
+  /* ---- Signal ---- */
+  --color-signal-success: #38A169;
+  --color-signal-warning: #ED8936;
+  --color-signal-risk: #E53E3E;
+  --color-signal-info: #3182CE;
+
+  /* ---- Status backgrounds ---- */
+  --color-bg-success: #C6F6D5;
+  --color-bg-success-subtle: #F0FFF4;
+  --color-bg-info: #BEE3F8;
+  --color-bg-info-subtle: #EBF8FF;
+  --color-bg-warning: #FEEBC8;
+  --color-bg-warning-subtle: #FFFAF0;
+  --color-bg-error: #FED7D7;
+  --color-bg-error-subtle: #FFF5F5;
+
+  /* ---- Input backgrounds ---- */
+  --color-bg-input: #ffffff;
+  --color-bg-input-hover: #F7FAFC;
+  --color-bg-input-disabled: #EDF2F7;
+
+  /* ---- Avatar ---- */
+  --color-avatar-deal: #63B3ED;
+  --color-avatar-filter: #FAF089;
+
+  /* ---- Source-branded ---- */
+  --color-source-teams: #6264A7;
+  --color-source-slack: #4A154B;
+  --color-source-gmail: #EA4335;
+  --color-source-hubspot: #FF7A59;
+
+  /* ---- Chart palette ---- */
+  --color-chart-6: #ED64A6;
+  --color-chart-7: #718096;
+  --color-chart-8: #E53E3E;
+
+  /* ---- shadcn variable bridge ---- */
+  --background: var(--color-surface-secondary);
+  --foreground: var(--color-fg-primary);
+  --card: var(--color-surface-primary);
+  --card-foreground: var(--color-fg-primary);
+  --popover: var(--color-surface-elevated);
+  --popover-foreground: var(--color-fg-primary);
+  --primary: var(--color-brand-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-surface-secondary);
+  --secondary-foreground: var(--color-fg-primary);
+  --muted: var(--color-surface-secondary);
+  --muted-foreground: var(--color-fg-muted);
+  --accent: var(--color-surface-hover);
+  --accent-foreground: var(--color-fg-primary);
+  --destructive: var(--color-signal-risk);
+  --border: var(--color-border-default);
+  --input: var(--color-border-default);
+  --ring: var(--color-brand-primary);
+  --radius: 0.625rem;
+
+  /* ---- Shadows ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-card-elevated: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+  --shadow-dropdown: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-modal: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-popover: 0 4px 12px -2px rgb(0 0 0 / 0.12), 0 2px 6px -2px rgb(0 0 0 / 0.08);
+  --shadow-tooltip: 0 2px 8px -2px rgb(0 0 0 / 0.15), 0 1px 4px -1px rgb(0 0 0 / 0.1);
+  --shadow-toast: 0 10px 15px -3px rgb(0 0 0 / 0.12), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+  --shadow-focus: 0 0 0 3px rgba(128, 90, 213, 0.4);
+  --shadow-focus-visible: 0 0 0 2px #fff, 0 0 0 4px rgba(128, 90, 213, 0.8);
+  --shadow-input-focus: 0 0 0 3px rgba(128, 90, 213, 0.25);
+  --shadow-input-error: 0 0 0 3px rgba(229, 62, 62, 0.25);
+
+  /* ---- Chart (shadcn bridge) ---- */
+  --chart-1: #3182CE;
+  --chart-2: #38A169;
+  --chart-3: #805AD5;
+  --chart-4: #ED8936;
+  --chart-5: #38B2AC;
+
+  /* ---- Sidebar (shadcn bridge) ---- */
+  --sidebar: var(--color-surface-primary);
+  --sidebar-foreground: var(--color-fg-primary);
+  --sidebar-primary: var(--color-brand-primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--color-surface-secondary);
+  --sidebar-accent-foreground: var(--color-fg-primary);
+  --sidebar-border: var(--color-border-default);
+  --sidebar-ring: var(--color-brand-primary);
+
+  /* ---- Density scale (foundation for upcoming Appearance toggle) ----
+     1 = comfortable (default), 0.875 = compact, 1.125 = spacious.
+     Consume via calc(... * var(--density)) when sizing controls/rows. */
+  --density: 1;
+
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Opt-in density variants — applied via data-density on <html> */
+html[data-density="compact"]  { --density: 0.875; }
+html[data-density="spacious"] { --density: 1.125; }
+
+/* ============================================================================
+   Dark Mode Token Values
+   ============================================================================ */
+.dark {
+  /* ---- Surface ---- */
+  --color-surface-primary: #222326;
+  --color-surface-secondary: #1A1B1D;
+  --color-surface-elevated: #2A2B2E;
+  --color-surface-muted: #2A2B2F;
+  --color-surface-subtle: #323338;
+  --color-surface-inverted: #F0F0F0;
+  --color-surface-hover: #2F3035;
+  --color-surface-active: #38393E;
+  --color-surface-selected: rgba(159, 122, 234, 0.18);
+  --color-surface-disabled: #252629;
+
+  /* ---- Foreground ---- */
+  --color-fg-primary: #E2E8F0;
+  --color-fg-secondary: #A0AEC0;
+  --color-fg-muted: #718096;
+  --color-fg-inverted: #1A202C;
+  --color-fg-disabled: #4A5568;
+  --color-fg-placeholder: #4A5568;
+  --color-fg-link: #63B3ED;
+  --color-fg-link-hover: #90CDF4;
+  --color-fg-success: #68D391;
+  --color-fg-info: #63B3ED;
+  --color-fg-warning: #F6AD55;
+  --color-fg-error: #FC8181;
+
+  /* ---- Border ---- */
+  --color-border-default: #3A3B3F;
+  --color-border-subtle: #2E2F33;
+  --color-border-emphasized: #4A4B50;
+  --color-border-hover: #4A4B50;
+  --color-border-focus: #9F7AEA;
+  --color-border-active: #B794F4;
+  --color-border-disabled: #2E2F33;
+  --color-border-success: #2F855A;
+  --color-border-info: #2B6CB0;
+  --color-border-warning: #C05621;
+  --color-border-error: #C53030;
+
+  /* ---- Brand (purple scale, dark mode uses purple.400) ---- */
+  --color-brand-primary: #9F7AEA;
+  --color-brand-hover: #B794F4;
+  --color-brand-active: #D6BCFA;
+  --color-brand-subtle: rgba(159, 122, 234, 0.15);
+  --color-brand-on-primary: #1A1B1D;
+
+  /* ---- Signal ---- */
+  --color-signal-success: #68D391;
+  --color-signal-warning: #F6AD55;
+  --color-signal-risk: #FC8181;
+  --color-signal-info: #63B3ED;
+
+  /* ---- Status backgrounds (dark tints) ---- */
+  --color-bg-success: rgba(56, 161, 105, 0.15);
+  --color-bg-success-subtle: rgba(56, 161, 105, 0.08);
+  --color-bg-info: rgba(49, 130, 206, 0.15);
+  --color-bg-info-subtle: rgba(49, 130, 206, 0.08);
+  --color-bg-warning: rgba(237, 137, 54, 0.15);
+  --color-bg-warning-subtle: rgba(237, 137, 54, 0.08);
+  --color-bg-error: rgba(229, 62, 62, 0.15);
+  --color-bg-error-subtle: rgba(229, 62, 62, 0.08);
+
+  /* ---- Input backgrounds ---- */
+  --color-bg-input: #222326;
+  --color-bg-input-hover: #2A2B2F;
+  --color-bg-input-disabled: #252629;
+
+  /* ---- Avatar ---- */
+  --color-avatar-deal: #4299E1;
+  --color-avatar-filter: #ECC94B;
+
+  /* ---- Source-branded ---- */
+  --color-source-teams: #7B7FCA;
+  --color-source-slack: #E01E5A;
+  --color-source-gmail: #EA4335;
+  --color-source-hubspot: #FF7A59;
+
+  /* ---- Chart palette (dark) ---- */
+  --color-chart-6: #F687B3;
+  --color-chart-7: #A0AEC0;
+  --color-chart-8: #FC8181;
+
+  /* ---- shadcn variable bridge ---- */
+  --background: var(--color-surface-secondary);
+  --foreground: var(--color-fg-primary);
+  --card: var(--color-surface-primary);
+  --card-foreground: var(--color-fg-primary);
+  --popover: var(--color-surface-elevated);
+  --popover-foreground: var(--color-fg-primary);
+  --primary: var(--color-brand-primary);
+  --primary-foreground: #1A1B1D;
+  --secondary: var(--color-surface-elevated);
+  --secondary-foreground: var(--color-fg-primary);
+  --muted: var(--color-surface-elevated);
+  --muted-foreground: var(--color-fg-muted);
+  --accent: var(--color-surface-hover);
+  --accent-foreground: var(--color-fg-primary);
+  --destructive: var(--color-signal-risk);
+  --border: var(--color-border-default);
+  --input: var(--color-border-default);
+  --ring: var(--color-brand-primary);
+
+  /* ---- Shadows (3-4x stronger for dark absorption) ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.25), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  --shadow-card-elevated: 0 4px 12px -2px rgb(0 0 0 / 0.35), 0 2px 6px -2px rgb(0 0 0 / 0.25);
+  --shadow-dropdown: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-modal: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-popover: 0 4px 12px -2px rgb(0 0 0 / 0.45), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+  --shadow-tooltip: 0 2px 8px -2px rgb(0 0 0 / 0.4), 0 1px 4px -1px rgb(0 0 0 / 0.3);
+  --shadow-toast: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.35);
+  --shadow-focus: 0 0 0 3px rgba(159, 122, 234, 0.4);
+  --shadow-focus-visible: 0 0 0 2px #1A1B1D, 0 0 0 4px rgba(159, 122, 234, 0.8);
+  --shadow-input-focus: 0 0 0 3px rgba(159, 122, 234, 0.25);
+  --shadow-input-error: 0 0 0 3px rgba(229, 62, 62, 0.25);
+
+  /* ---- Chart (shadcn bridge, dark) ---- */
+  --chart-1: #63B3ED;
+  --chart-2: #68D391;
+  --chart-3: #9F7AEA;
+  --chart-4: #F6AD55;
+  --chart-5: #4FD1C5;
+
+  /* ---- Sidebar (shadcn bridge) ---- */
+  --sidebar: var(--color-surface-primary);
+  --sidebar-foreground: var(--color-fg-primary);
+  --sidebar-primary: var(--color-brand-primary);
+  --sidebar-primary-foreground: #1A1B1D;
+  --sidebar-accent: var(--color-surface-elevated);
+  --sidebar-accent-foreground: var(--color-fg-primary);
+  --sidebar-border: var(--color-border-default);
+  --sidebar-ring: var(--color-brand-primary);
+
+  color-scheme: dark;
 }
 
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: "Inter";
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Desktop density: scale the root font-size to 15px (93.75% of browser default).
+   Every rem-based measurement in Tailwind/shadcn — text, padding, gap, button
+   heights, icon sizes — compresses proportionally. Matches the "90% zoom"
+   feel of dense B2B SaaS (Linear, Vercel, Attio) without touching component
+   code. Breakpoints are pinned to px (see @theme above) so responsive layouts
+   don't shift. Mobile stays at 16px to avoid iOS input-focus auto-zoom. */
+html {
+  font-size: 15px;
 }
 
-/* Keep box-sizing reset but do not zero out padding/margin so Chakra defaults apply */
-*, *::before, *::after {
+@media (max-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+body {
+  background-color: var(--background);
+  font-family: "Inter", sans-serif;
+  line-height: 1.45;
+  font-feature-settings: "cv11" 1, "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@media (max-width: 768px) {
+  body {
+    line-height: 1.5;
+  }
+}
+
+/* Data surfaces: tabular numerals so numeric columns don't jitter on update.
+   Opt in with <table> (auto) or data-tabular="true" on any container. */
+table,
+[data-tabular="true"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv11" 1, "ss01" 1;
+}
+
+/* Box-sizing reset */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -34,22 +558,85 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* ============================================================================
+   Chat Interface — Message Bubbles & Resize Handle
+   ============================================================================ */
+.chat-bubble-user {
+  border-radius: 16px;
+}
+
+/* Remove trailing margin from last element inside user bubble */
+.chat-bubble-user *:last-child {
+  margin-bottom: 0;
+}
+
+/* ---- Chat Markdown — compact loose lists (p-in-li from blank lines) ---- */
+.chat-markdown li > p {
+  margin-top: 0;
+  margin-bottom: 0.375rem;
+}
+.chat-markdown li > p:last-child {
+  margin-bottom: 0;
+}
+.chat-markdown li > ul,
+.chat-markdown li > ol {
+  margin-top: 0.125rem;
+  margin-bottom: 0;
+}
+.chat-markdown li > blockquote {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.chat-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Controlled spacing between list items */
+.chat-markdown ol > li {
+  margin-bottom: 0.875rem;
+}
+.chat-markdown ul > li {
+  margin-bottom: 0.5rem;
+}
+.chat-markdown ol > li:last-child,
+.chat-markdown ul > li:last-child {
+  margin-bottom: 0;
+}
+
+/* Section headings: first h2/h3 in message needs no extra top margin */
+.chat-markdown > h2:first-child,
+.chat-markdown > h3:first-child {
+  margin-top: 0;
+}
+
+/* ---- Chat Table Breakout — extend tables beyond message container ---- */
+.chat-scroll-container {
+  container-type: inline-size;
+}
+
+.chat-table-breakout {
+  width: max-content;
+  max-width: calc(100cqw - 3rem);    /* narrow screens: full width minus padding */
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Wide screens: account for centered max-w-3xl offset */
+@container (min-width: 48rem) {
+  .chat-table-breakout {
+    max-width: calc(50cqw + 21rem);   /* = scrollWidth/2 + 336px → 16px from right edge */
   }
 }
 
-/*  */
-/* Custom styles for the chat interface */
+.chat-progress-bar-glow {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-signal-info) 50%, transparent);
+}
 
-/* Resize handle styling */
 .custom-resize-handle {
   position: relative;
   transition: background-color 0.2s;
 }
 
-/* Add a grip indicator */
 .custom-resize-handle::after {
   content: "";
   position: absolute;
@@ -58,28 +645,312 @@ a {
   transform: translate(-50%, -50%);
   width: 8px;
   height: 30px;
-  background-color: var(--chakra-colors-gray-400);
+  background-color: var(--color-border-emphasized);
   border-radius: 100px;
 }
 
 .custom-resize-handle:hover {
-  background-color: var(--chakra-colors-blue-300) !important;
+  background-color: var(--color-brand-hover) !important;
 }
 
 .custom-resize-handle:active,
 .custom-resize-handle:active::after {
-  background-color: var(--chakra-colors-blue-500) !important;
+  background-color: var(--color-brand-primary) !important;
 }
 
-/* Add another grip line for visual appeal */
-/* .custom-resize-handle::before {
+/* ============================================================================
+   Task Checkbox Animations
+   ============================================================================ */
+@keyframes task-check-pop {
+  0% { transform: scale(1); }
+  20% { transform: scale(1.3); }
+  50% { transform: scale(0.85); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes task-check-success {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-signal-success) 50%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-signal-success) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-signal-success) 0%, transparent); }
+}
+
+.task-checkbox {
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+.task-checkbox:disabled {
+  cursor: not-allowed !important;
+}
+
+.task-checkbox:not([data-checked]):not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--color-signal-success) 10%, transparent) !important;
+  border-color: color-mix(in srgb, var(--color-signal-success) 60%, transparent) !important;
+}
+
+.task-checkbox[data-checked]:not(:disabled):hover {
+  opacity: 0.7;
+}
+
+/* ============================================================================
+   Thin Scrollbar — applied globally to all scrollable elements
+   ============================================================================ */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-emphasized);
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-fg-muted);
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-emphasized) transparent;
+}
+/* Keep .thin-scrollbar class for backward compatibility */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-emphasized) transparent;
+}
+
+/* ============================================================================
+   Animations
+   ============================================================================ */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================================
+   Loading Cursor Animations
+   ============================================================================ */
+@keyframes loading-cursor-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.3; transform: scale(0.8); }
+}
+
+@keyframes loading-cursor-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes loading-cursor-fade-in-out {
+  0% { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ============================================================================
+   Design System Animations
+   ============================================================================ */
+@keyframes ds-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes ds-ai-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes ds-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+   AI Generation State Animations
+   ============================================================================ */
+@keyframes ai-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.3; transform: scale(0.75); }
+}
+@keyframes ai-text-fade {
+  0%  { opacity: 0; transform: translateY(4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ============================================================================
+   Design System Typography Utilities
+   ============================================================================ */
+@layer utilities {
+  /* Heading line-heights tuned for B2B density: ratios 1.2 / 1.25 / 1.3 / 1.33
+     from xl → sm. Tighter than Tailwind defaults so headings stack cleanly
+     without visible gaps in dense layouts. Body ratios stay at 1.38–1.45
+     for comfortable reading. */
+  .text-heading-xl { font-size: 1.875rem; font-weight: 700; line-height: 2.25rem; }
+  .text-heading-lg { font-size: 1.5rem;   font-weight: 600; line-height: 1.875rem; }
+  .text-heading-md { font-size: 1.25rem;  font-weight: 600; line-height: 1.625rem; }
+  .text-heading-sm { font-size: 1.125rem; font-weight: 600; line-height: 1.5rem; }
+  .text-body-md    { font-size: 0.875rem; font-weight: 400; line-height: 1.25rem; }
+  .text-body-sm    { font-size: 0.8125rem;font-weight: 400; line-height: 1.125rem; }
+  .text-caption    { font-size: 0.75rem;  font-weight: 400; line-height: 1rem; }
+  .text-label      { font-size: 0.8125rem;font-weight: 500; line-height: 1rem; }
+}
+
+/* ============================================================================
+   Print Styles - Forces light theme for PDF/Print export
+   ============================================================================ */
+@media print {
+  :root,
+  html,
+  html.dark,
+  body {
+    --background: #ffffff !important;
+    --foreground: #1a1a1a !important;
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+    color-scheme: light !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .timeline-print-container,
+  [data-print-container] {
+    background-color: #ffffff !important;
+    color: #1a1a1a !important;
+  }
+
+  .timeline-print-container [class*="card"],
+  .timeline-print-container [class*="Card"] {
+    background-color: #f8f9fa !important;
+    border: 1px solid #e0e0e0 !important;
+    color: #1a1a1a !important;
+    box-shadow: none !important;
+  }
+
+  .timeline-print-container * {
+    color: #1a1a1a !important;
+  }
+
+  .timeline-print-container [class*="badge"],
+  .timeline-print-container [class*="Badge"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .timeline-print-container
+    [class*="badge"]:not([class*="red"]):not([class*="pink"]):not(
+      [class*="rose"]
+    ) {
+    background-color: #e8e8e8 !important;
+    color: #1a1a1a !important;
+  }
+
+  .timeline-print-container [class*="line"],
+  .timeline-print-container [style*="border-default"] {
+    background-color: #d0d0d0 !important;
+    border-color: #d0d0d0 !important;
+  }
+
+  .timeline-print-container button:not([data-print-visible]),
+  .timeline-print-container [class*="filter"],
+  .timeline-print-container [class*="Filter"],
+  .timeline-print-container [aria-label*="Load more"],
+  .timeline-print-container [class*="search"],
+  .timeline-print-container [class*="Search"],
+  .timeline-print-container input,
+  .timeline-print-container select {
+    display: none !important;
+  }
+
+  .timeline-print-container {
+    page-break-inside: auto;
+  }
+
+  .timeline-print-container > * {
+    page-break-inside: avoid;
+  }
+
+  .timeline-print-container * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+  }
+
+  .timeline-print-container [class*="detail"],
+  .timeline-print-container [class*="Detail"],
+  .timeline-print-container [class*="panel"]:not([class*="tabpanel"]) {
+    display: none !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+}
+
+/* Admin resize handle compatibility */
+.custom-resize-handle {
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.custom-resize-handle::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: calc(50% - 3px);
-  transform: translateY(-50%);
-  width: 1px;
-  height: 40px;
-  background-color: var(--chakra-colors-gray-400);
-  border-radius: 1px;
-} */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 30px;
+  background-color: var(--border);
+  border-radius: 100px;
+}
+
+.custom-resize-handle:hover {
+  background-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.custom-resize-handle:active,
+.custom-resize-handle:active::after {
+  background-color: var(--primary);
+}

@@ -1,36 +1,47 @@
 "use client";
 
-import {
-  Dialog,
-  Button,
-  Stack,
-  Input,
-  Portal,
-  CloseButton,
-  createListCollection,
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem,
-} from "@chakra-ui/react";
-import {
-  FormControl,
-  FormLabel,
-  FormErrorMessage,
-} from "@chakra-ui/form-control";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createUser } from "../../api";
+import { Controller, useForm } from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { toaster } from "@/components/ui/toaster";
 import { CreateUserInput, createUserSchema } from "@/app/schemas/users";
 import { listOrganizations } from "@/modules/organizations/api";
+import { createUser } from "../../api";
 import { useState } from "react";
-import { toaster } from "@/components/ui/toaster";
 
 interface CreateUserDialogProps {
   readonly trigger: React.ReactNode;
 }
+
+function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-2 text-sm font-medium text-fg-secondary">
+      {label}
+      {children}
+      {error ? <span className="text-xs font-normal text-destructive">{error}</span> : null}
+    </label>
+  );
+}
+
+const roleOptions = [
+  { label: "Member", value: "member" },
+  { label: "Admin", value: "admin" },
+] as const;
 
 export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
   const [open, setOpen] = useState(false);
@@ -49,35 +60,18 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
     },
   });
 
-  // Fetch organizations for the dropdown
-  const { data: orgData } = useQuery({
+  const { data: orgData, isLoading: isOrganizationsLoading } = useQuery({
     queryKey: ["organizations-list"],
     queryFn: () => listOrganizations({ limit: 100 }),
-  });
-
-  const orgCollection = createListCollection({
-    items: orgData?.organizations || [],
-    itemToString: (item) => item.organisation_name,
-    itemToValue: (item) => item.organisation_id,
-  });
-
-  const roleCollection = createListCollection({
-    items: [
-      { label: "Member", value: "member" },
-      { label: "Admin", value: "admin" },
-    ],
   });
 
   const mutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toaster.create({
-        title: "User created successfully",
-        type: "success",
-      });
+      toaster.create({ title: "User created successfully", type: "success" });
       setOpen(false);
-      reset();
+      reset({ user_role: "member" });
     },
     onError: (error: Error) => {
       toaster.create({
@@ -93,152 +87,99 @@ export function CreateUserDialog({ trigger }: CreateUserDialogProps) {
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={(details: { open: boolean }) => setOpen(details.open)}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.CloseTrigger asChild>
-              <CloseButton position="absolute" top="8px" right="8px" rounded="full" />
-            </Dialog.CloseTrigger>
-            <Dialog.Header>
-              <Dialog.Title>Create New User</Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              <Stack gap={4}>
-                <Stack direction="row" gap={4}>
-                  <FormControl isInvalid={!!errors.first_name}>
-                    <FormLabel>First Name</FormLabel>
-                    <Input {...register("first_name")} placeholder="Jane" />
-                    <FormErrorMessage>
-                      {errors.first_name?.message}
-                    </FormErrorMessage>
-                  </FormControl>
-                  <FormControl isInvalid={!!errors.last_name}>
-                    <FormLabel>Last Name</FormLabel>
-                    <Input {...register("last_name")} placeholder="Doe" />
-                    <FormErrorMessage>
-                      {errors.last_name?.message}
-                    </FormErrorMessage>
-                  </FormControl>
-                </Stack>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="gap-0 p-0 sm:max-w-2xl">
+        <DialogHeader className="px-6 py-5">
+          <DialogTitle>Create new user</DialogTitle>
+          <DialogDescription>Add a user to an organization and assign their app access role.</DialogDescription>
+        </DialogHeader>
+        <Separator />
 
-                <FormControl isInvalid={!!errors.email}>
-                  <FormLabel>Email</FormLabel>
-                  <Input
-                    {...register("email")}
-                    type="email"
-                    placeholder="jane@example.com"
-                  />
-                  <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
-                </FormControl>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+            <Field label="First name" error={errors.first_name?.message}>
+              <Input {...register("first_name")} placeholder="Jane" aria-invalid={!!errors.first_name} />
+            </Field>
+            <Field label="Last name" error={errors.last_name?.message}>
+              <Input {...register("last_name")} placeholder="Doe" aria-invalid={!!errors.last_name} />
+            </Field>
 
-                <Controller
-                  control={control}
-                  name="organisation_id"
-                  render={({ field }) => (
-                    <FormControl isInvalid={!!errors.organisation_id}>
-                      <FormLabel>Organization</FormLabel>
-                      <SelectRoot
-                        collection={orgCollection}
-                        name={field.name}
-                        value={field.value ? [field.value] : []}
-                        onValueChange={(details: { value: string[] }) => field.onChange(details.value[0])}
-                      >
-                        <SelectTrigger>
-                          <SelectValueText placeholder="Select organization" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {orgCollection.items.map((org) => (
-                            <SelectItem
-                              item={org}
-                              key={org.organisation_id}
-                            >
+            <div className="md:col-span-2">
+              <Field label="Email" error={errors.email?.message}>
+                <Input {...register("email")} type="email" placeholder="jane@example.com" autoComplete="email" aria-invalid={!!errors.email} />
+              </Field>
+            </div>
+
+            <div className="md:col-span-2">
+              <Controller
+                control={control}
+                name="organisation_id"
+                render={({ field }) => (
+                  <Field label="Organization" error={errors.organisation_id?.message}>
+                    <Select value={field.value ?? ""} onValueChange={field.onChange} disabled={isOrganizationsLoading}>
+                      <SelectTrigger aria-invalid={!!errors.organisation_id}>
+                        <SelectValue placeholder={isOrganizationsLoading ? "Loading organizations" : "Select organization"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {(orgData?.organizations ?? []).map((org) => (
+                            <SelectItem key={org.organisation_id} value={org.organisation_id}>
                               {org.organisation_name}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </SelectRoot>
-                      <FormErrorMessage>
-                        {errors.organisation_id?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                  )}
-                />
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              />
+            </div>
 
-                <Stack direction="row" gap={4}>
-                  <FormControl isInvalid={!!errors.job_title}>
-                    <FormLabel>Job Title</FormLabel>
-                    <Input
-                      {...register("job_title")}
-                      placeholder="Software Engineer"
-                    />
-                    <FormErrorMessage>
-                      {errors.job_title?.message}
-                    </FormErrorMessage>
-                  </FormControl>
+            <Field label="Job title" error={errors.job_title?.message}>
+              <Input {...register("job_title")} placeholder="Software Engineer" aria-invalid={!!errors.job_title} />
+            </Field>
+            <Field label="Org role" error={errors.organisation_role?.message}>
+              <Input {...register("organisation_role")} placeholder="Developer" aria-invalid={!!errors.organisation_role} />
+            </Field>
 
-                  <FormControl isInvalid={!!errors.organisation_role}>
-                    <FormLabel>Org Role</FormLabel>
-                    <Input
-                      {...register("organisation_role")}
-                      placeholder="Developer"
-                    />
-                    <FormErrorMessage>
-                      {errors.organisation_role?.message}
-                    </FormErrorMessage>
-                  </FormControl>
-                </Stack>
-
-                <Controller
-                  control={control}
-                  name="user_role"
-                  render={({ field }) => (
-                    <FormControl isInvalid={!!errors.user_role}>
-                      <FormLabel>App Role</FormLabel>
-                      <SelectRoot
-                        collection={roleCollection}
-                        name={field.name}
-                        value={field.value ? [field.value] : []}
-                        onValueChange={(details: { value: string[] }) => field.onChange(details.value[0])}
-                      >
-                        <SelectTrigger>
-                          <SelectValueText placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roleCollection.items.map((role) => (
-                            <SelectItem item={role} key={role.value}>
+            <div className="md:col-span-2">
+              <Controller
+                control={control}
+                name="user_role"
+                render={({ field }) => (
+                  <Field label="App role" error={errors.user_role?.message}>
+                    <Select value={field.value ?? "member"} onValueChange={field.onChange}>
+                      <SelectTrigger aria-invalid={!!errors.user_role}>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {roleOptions.map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
                               {role.label}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </SelectRoot>
-                      <FormErrorMessage>
-                        {errors.user_role?.message}
-                      </FormErrorMessage>
-                    </FormControl>
-                  )}
-                />
-              </Stack>
-            </Dialog.Body>
-            <Dialog.Footer>
-              <Dialog.ActionTrigger asChild>
-                <Button variant="outline">Cancel</Button>
-              </Dialog.ActionTrigger>
-              <Button
-                onClick={handleSubmit(onSubmit)}
-                loading={isSubmitting || mutation.isPending}
-                bg="purple.600"
-                color="white"
-                _hover={{ bg: "purple.500" }}
-              >
-                Create User
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                )}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit" disabled={isSubmitting || mutation.isPending}>
+              {isSubmitting || mutation.isPending ? <Spinner data-icon="inline-start" size="sm" /> : null}
+              Create User
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,38 +1,38 @@
 "use client";
 
-import {
-  Flex,
-  Box,
-  Stack,
-  Button,
-  Heading,
-  Text,
-  Image,
-  Center,
-  Link,
-} from "@chakra-ui/react";
-import PasswordInput from "@/components/password-input";
-import { useRouter } from "next/navigation";
-import {
-  resetPasswordSchema,
-  type ResetPasswordInput,
-} from "@/modules/auth/schemas";
-import { useForm } from "react-hook-form";
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { resetPassword } from "@/modules/auth/api";
+import { CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import PasswordInput from "@/components/password-input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { toaster } from "@/components/ui/toaster";
-
+import { resetPassword } from "@/modules/auth/api";
+import { resetPasswordSchema, type ResetPasswordInput } from "@/modules/auth/schemas";
 export interface ResetPasswordCardProps {
   tokenHash: string;
   forceChange: boolean;
+}
+
+function Requirement({ valid, children }: { valid: boolean; children: React.ReactNode }) {
+  return (
+    <li className={valid ? "flex items-center gap-2 text-fg-secondary" : "flex items-center gap-2 text-signal-risk"}>
+      {valid ? <CheckCircle2 data-icon="inline-start" /> : <XCircle data-icon="inline-start" />}
+      {children}
+    </li>
+  );
 }
 
 export function ResetPasswordCard({ tokenHash, forceChange }: Readonly<ResetPasswordCardProps>) {
   const router = useRouter();
 
   const {
-    register: resetPasswordForm,
+    register,
     handleSubmit,
     watch,
     formState: { errors, isValid, isSubmitting },
@@ -61,14 +61,13 @@ export function ResetPasswordCard({ tokenHash, forceChange }: Readonly<ResetPass
   const resetPasswordMutation = useMutation({
     mutationFn: (data: ResetPasswordInput) => resetPassword(data),
     onSuccess: () => {
-      toaster.create({ title: "Password reset successfully!" });
+      toaster.create({ title: "Password reset successfully" });
       router.push("/signin");
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (err: any) => {
+    onError: (error: unknown) => {
       toaster.create({
         title: "Failed to reset password",
-        description: err?.response?.data?.message || "Something went wrong",
+        description: error instanceof Error ? error.message : "Something went wrong",
         type: "error",
       });
     },
@@ -79,129 +78,66 @@ export function ResetPasswordCard({ tokenHash, forceChange }: Readonly<ResetPass
   };
 
   return (
-    <Flex minH={"100vh"} align={"center"} justify={"center"} bg={"white"}>
-      <Stack gap={8} mx={"auto"} maxW={"lg"} py={12} px={6}>
-        <Box w={"md"} rounded={"xl"} bg={"white"} boxShadow={"md"} p={8}>
-          {/* 🔹 Lock Icon */}
-          <Stack align={"center"}>
-            <Image src="./ic-lock.svg" alt="Forget password icon" />
-            <Heading
-              fontSize={"2xl"}
-              fontWeight={"semibold"}
-              color={"gray.800"}
-            >
-              Set new password
-            </Heading>
-            <Text fontSize={"sm"} fontWeight={"medium"} color={"gray.500"}>
-              Create a strong password for your account
-            </Text>
-          </Stack>
+    <main className="grid min-h-dvh place-items-center bg-surface-secondary px-4 py-10">
+      <div className="flex w-full max-w-md flex-col gap-5">
+        <Card className="border-border bg-surface-primary shadow-card-elevated">
+          <CardContent className="px-8 py-9">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Image src="/ic-lock.svg" alt="Password reset" width={64} height={64} className="size-16" />
+              <div className="mt-2 flex flex-col gap-1">
+                <h1 className="text-2xl font-semibold text-fg-primary">Set new password</h1>
+                <p className="text-sm font-medium text-fg-muted">Create a strong password for your account.</p>
+              </div>
+            </div>
 
-          {/* 🔹 Form */}
-          <Stack gap={5} mt={8}>
-            {/* New Password */}
-            <PasswordInput
-              label="New password"
-              placeholder="Enter new password"
-              {...resetPasswordForm("new_password")}
-              error={errors.new_password?.message}
-            />
+            <form className="mt-8 flex flex-col gap-5" onSubmit={handleSubmit(onSubmit)}>
+              <PasswordInput
+                label="New password"
+                placeholder="Enter new password"
+                autoComplete="new-password"
+                {...register("new_password")}
+                error={errors.new_password?.message}
+              />
 
-            {/* Confirm Password */}
-            <PasswordInput
-              label="Confim Password"
-              placeholder="Confirm new password"
-              {...resetPasswordForm("confirm_password")}
-              error={errors.confirm_password?.message}
-            />
+              <PasswordInput
+                label="Confirm password"
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                {...register("confirm_password")}
+                error={errors.confirm_password?.message}
+              />
 
-            {/* 🔹 Password Requirements */}
-            <Box fontSize="sm" color="gray.600">
-              <Text fontSize={"sm"} fontWeight="medium">
-                Password Requirements:
-              </Text>
-              <Stack gap={1} fontWeight="normal">
-                <Text
-                  color={passwordValidations.length ? "gray.700" : "red.500"}
-                >
-                  • Minimum 8 characters
-                </Text>
-                <Text
-                  color={passwordValidations.uppercase ? "gray.700" : "red.500"}
-                >
-                  • At least one uppercase letter
-                </Text>
-                <Text
-                  color={passwordValidations.number ? "gray.700" : "red.500"}
-                >
-                  • At least one number
-                </Text>
-                <Text
-                  color={passwordValidations.special ? "gray.700" : "red.500"}
-                >
-                  • At least one special character
-                </Text>
-                <Text
-                  color={passwordValidations.match ? "gray.700" : "red.500"}
-                >
-                  • Passwords must match
-                </Text>
-              </Stack>
-            </Box>
+              <div className="rounded-lg border border-border bg-surface-secondary/50 p-3 text-sm">
+                <div className="mb-2 font-medium text-fg-primary">Password requirements</div>
+                <ul className="flex flex-col gap-1.5">
+                  <Requirement valid={passwordValidations.length}>Minimum 8 characters</Requirement>
+                  <Requirement valid={passwordValidations.uppercase}>At least one uppercase letter</Requirement>
+                  <Requirement valid={passwordValidations.number}>At least one number</Requirement>
+                  <Requirement valid={passwordValidations.special}>At least one special character</Requirement>
+                  <Requirement valid={passwordValidations.match}>Passwords must match</Requirement>
+                </ul>
+              </div>
 
-            {/* Reset Password Button */}
-            <Button
-              bg="purple.600"
-              height="48px"
-              borderRadius="6px"
-              fontSize="lg"
-              fontWeight="semibold"
-              color="white"
-              _hover={{ bg: "purple.500" }}
-              onClick={handleSubmit(onSubmit)}
-              loading={isSubmitting || resetPasswordMutation.isPending}
-              disabled={
-                !isValid || isSubmitting || resetPasswordMutation.isPending
-              }
-              loadingText="Reseting Password..."
-              spinnerPlacement="end"
-            >
-              Reset Password
-            </Button>
+              <Button type="submit" className="h-12 text-base" disabled={!isValid || isSubmitting || resetPasswordMutation.isPending}>
+                {isSubmitting || resetPasswordMutation.isPending ? <Spinner data-icon="inline-start" size="sm" /> : null}
+                Reset Password
+              </Button>
 
-            {/* 🔹 "Remember password? Sign in" */}
-            <Center mt={2}>
-              <Text fontSize={"sm"} fontWeight={"normal"} color={"gray.600"}>
+              <p className="text-center text-sm text-fg-secondary">
                 Remember your password?{" "}
-                <Link
-                  href="/signin"
-                  as="a"
-                  fontWeight={"semibold"}
-                  color="purple.600"
-                  _hover={{
-                    opacity: 0.8,
-                    textDecoration: "none",
-                  }}
-                  _focus={{
-                    outline: "none",
-                  }}
-                  _active={{
-                    outline: "none",
-                  }}
-                >
+                <Link href="/signin" className="font-semibold text-brand-primary hover:text-brand-hover">
                   Sign in
                 </Link>
-              </Text>
-            </Center>
-          </Stack>
-        </Box>
-        {resetPasswordMutation.isError && (
-          <Text textAlign={"center"} fontSize={"sm"} color={"red.500"}>
-            An error occurred during password reset
-          </Text>
-        )}
-      </Stack>
-    </Flex>
+              </p>
+            </form>
+          </CardContent>
+        </Card>
+
+        {resetPasswordMutation.isError ? (
+          <p className="text-center text-sm text-signal-risk">An error occurred during password reset</p>
+        ) : null}
+      </div>
+    </main>
   );
 }
 

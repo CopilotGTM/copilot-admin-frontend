@@ -1,58 +1,75 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Badge,
-  Box,
-  Button,
-  HStack,
-  Icon,
-  IconButton,
-  Menu,
-  Portal,
-  Separator,
-  Skeleton,
-  Stack,
-  Text,
-  createListCollection,
-  SelectContent,
-  SelectItem,
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-} from "@chakra-ui/react";
-import { PageHeader } from "@/components/layout";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, MoreVertical, Pencil, Plus, SearchX } from "lucide-react";
+import { AdminPageShell, PageHeader } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Column, CustomTable } from "@/components/ui/custom-table";
-import { useColorModeValue } from "@/components/ui/color-mode";
-import { toaster } from "@/components/ui/toaster";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import ViewUserDialog from "@/components/organizations/dialogs/view-user-dialog";
 import EditUserDialog from "@/components/organizations/dialogs/edit-user-dialog";
 import { CreateUserDialog } from "@/modules/users/components/dialogs";
 import { listOrganizations } from "@/modules/organizations/api";
 import type { OrganizationListItem } from "@/modules/organizations/types";
-import {
-  updateUserAdminStatus,
-  updateUserDetails,
-} from "@/modules/users/api";
+import { updateUserAdminStatus, updateUserDetails } from "@/modules/users/api";
 import { useUserActionHistory, useUsers } from "@/modules/users/hooks";
-import type { AdminUserStatus, UserEventType, UserListItem, UpdateUserDetailsRequest } from "@/modules/users/types";
+import type { AdminUserStatus, UpdateUserDetailsRequest, UserEventType, UserListItem } from "@/modules/users/types";
+import { toaster } from "@/components/ui/toaster";
 import { formatDateShort } from "@/lib/utils/format-date";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, MoreVertical, Pencil, Plus, SearchX } from "lucide-react";
+
+const PAGE_SIZE = 20;
 
 type UserRow = UserListItem & { id: string };
-
 type UserStatusAction = "approve" | "reject" | "suspend" | "reinstate" | "deactivate";
 
 const USER_STATUS_ACTION_LABELS: Record<
   UserStatusAction,
-  { label: string; nextStatus: AdminUserStatus; color: string }
+  { label: string; nextStatus: AdminUserStatus; variant?: "default" | "destructive" }
 > = {
-  approve: { label: "Approve", nextStatus: "approved", color: "green.600" },
-  reject: { label: "Reject", nextStatus: "rejected", color: "red.600" },
-  suspend: { label: "Suspend", nextStatus: "suspended", color: "orange.600" },
-  reinstate: { label: "Reinstate", nextStatus: "approved", color: "green.600" },
-  deactivate: { label: "Deactivate", nextStatus: "deactivated", color: "red.600" },
+  approve: { label: "Approve", nextStatus: "approved" },
+  reject: { label: "Reject", nextStatus: "rejected", variant: "destructive" },
+  suspend: { label: "Suspend", nextStatus: "suspended" },
+  reinstate: { label: "Reinstate", nextStatus: "approved" },
+  deactivate: { label: "Deactivate", nextStatus: "deactivated", variant: "destructive" },
+};
+
+const userStatusVariant: Record<AdminUserStatus, BadgeVariant> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "risk",
+  suspended: "warning",
+  deactivated: "secondary",
+};
+
+const accountStatusVariant: Record<string, BadgeVariant> = {
+  active: "success",
+  inactive: "secondary",
+  pending: "warning",
+  suspended: "warning",
+  deleted: "risk",
+};
+
+const historyActionVariant: Partial<Record<UserEventType, BadgeVariant>> = {
+  created: "info",
+  updated: "secondary",
+  status_changed: "primary-subtle",
+  role_changed: "primary-subtle",
+  deleted: "risk",
+  login: "success",
+  password_reset: "warning",
+  email_verified: "success",
+  field_changed: "secondary",
 };
 
 function getValidUserActions(adminStatus: AdminUserStatus): UserStatusAction[] {
@@ -71,35 +88,33 @@ function getValidUserActions(adminStatus: AdminUserStatus): UserStatusAction[] {
   }
 }
 
-const historyActionPalette: Partial<Record<UserEventType, string>> = {
-  created: "blue",
-  updated: "gray",
-  status_changed: "purple",
-  role_changed: "purple",
-  deleted: "red",
-  login: "green",
-  password_reset: "orange",
-  email_verified: "green",
-  field_changed: "gray",
-};
+function TableLoadingState() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <Skeleton className="h-10 rounded-md" />
+      <div className="rounded-lg border border-border bg-surface-primary p-4 shadow-xs">
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="grid grid-cols-[2fr_2fr_2fr_1fr_1fr] gap-3">
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+              <Skeleton className="h-6 rounded-md" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function UsersPage() {
   const queryClient = useQueryClient();
-
-  const PAGE_SIZE = 20;
   const [cursor, setCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
-
   const [organisationFilterId, setOrganisationFilterId] = useState<string | undefined>(undefined);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-
-  const muted = useColorModeValue("gray.600", "gray.400");
-  const cardBg = useColorModeValue("white", "gray.900");
-  const cardBorder = useColorModeValue("gray.200", "gray.700");
-  const panelBg = useColorModeValue("white", "gray.900");
-  const panelBorder = useColorModeValue("gray.200", "gray.700");
-  const iconBg = useColorModeValue("purple.50", "purple.900");
-  const iconColor = useColorModeValue("purple.600", "purple.300");
 
   const { data: orgData, isLoading: isOrgsLoading } = useQuery({
     queryKey: ["organizations", { limit: 100 }],
@@ -131,19 +146,9 @@ export default function UsersPage() {
     ];
   }, [orgData?.organizations]);
 
-  const orgCollection = useMemo(
-    () =>
-      createListCollection({
-        items: organisationsWithAll,
-        itemToString: (item) => item.organisation_name,
-        itemToValue: (item) => item.organisation_id,
-      }),
-    [organisationsWithAll],
-  );
-
   const orgNameById = useMemo(() => {
     const map = new Map<string, string>();
-    (orgData?.organizations ?? []).forEach((o) => map.set(o.organisation_id, o.organisation_name));
+    (orgData?.organizations ?? []).forEach((organization) => map.set(organization.organisation_id, organization.organisation_name));
     return map;
   }, [orgData?.organizations]);
 
@@ -152,38 +157,25 @@ export default function UsersPage() {
     setCursorHistory([]);
   }, [organisationFilterId]);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-  } = useUsers({
+  const { data, isLoading, isError, error, refetch, isFetching } = useUsers({
     limit: PAGE_SIZE,
     cursor: cursor ?? undefined,
     organisation_id: organisationFilterId,
   });
 
-  const rows: UserRow[] = useMemo(
-    () => (data?.users ?? []).map((u) => ({ ...u, id: u.user_id })),
-    [data?.users],
-  );
+  const rows: UserRow[] = useMemo(() => (data?.users ?? []).map((user) => ({ ...user, id: user.user_id })), [data?.users]);
 
   useEffect(() => {
     if (rows.length === 0) {
       setSelectedUserId(null);
       return;
     }
-    if (!selectedUserId || !rows.some((r) => r.user_id === selectedUserId)) {
+    if (!selectedUserId || !rows.some((row) => row.user_id === selectedUserId)) {
       setSelectedUserId(rows[0].user_id);
     }
   }, [rows, selectedUserId]);
 
-  const selectedUser = useMemo(
-    () => rows.find((r) => r.user_id === selectedUserId) ?? null,
-    [rows, selectedUserId],
-  );
+  const selectedUser = useMemo(() => rows.find((row) => row.user_id === selectedUserId) ?? null, [rows, selectedUserId]);
 
   const updateUserDetailsMutation = useMutation<void, Error, { user_id: string; payload: UpdateUserDetailsRequest }>({
     mutationFn: async ({ user_id, payload }) => {
@@ -198,11 +190,7 @@ export default function UsersPage() {
     },
   });
 
-  const updateUserStatusMutation = useMutation<
-    void,
-    Error,
-    { user_id: string; nextStatus: AdminUserStatus; note?: string }
-  >({
+  const updateUserStatusMutation = useMutation<void, Error, { user_id: string; nextStatus: AdminUserStatus; note?: string }>({
     mutationFn: async ({ user_id, nextStatus, note }) => {
       await updateUserAdminStatus(user_id, { admin_status: nextStatus, note });
     },
@@ -219,147 +207,112 @@ export default function UsersPage() {
     {
       header: "Name",
       key: "first_name",
-      render: (u) => (
-        <Text fontWeight="semibold">
-          {u.first_name} {u.last_name}
-        </Text>
-      ),
+      render: (user) => <span className="font-semibold text-fg-primary">{user.first_name} {user.last_name}</span>,
     },
     { header: "Email", key: "email" },
     {
       header: "Organization",
       key: "organisation_id",
-      render: (u) => (
-        <Text fontSize="sm" color={muted}>
-          {orgNameById.get(u.organisation_id) ?? u.organisation_id}
-        </Text>
-      ),
+      render: (user) => <span className="text-sm text-fg-secondary">{orgNameById.get(user.organisation_id) ?? user.organisation_id}</span>,
     },
     { header: "Role", key: "organisation_role" },
     {
       header: "Status",
       key: "status",
-      render: (u) => (
-        <HStack gap={2}>
-          <Badge variant="subtle">{u.status}</Badge>
-          <Badge variant="subtle" textTransform="capitalize">{u.admin_status}</Badge>
-        </HStack>
+      render: (user) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={accountStatusVariant[String(user.status).toLowerCase()] ?? "secondary"} className="capitalize">{user.status}</Badge>
+          <Badge variant={userStatusVariant[user.admin_status]} className="capitalize">{user.admin_status}</Badge>
+        </div>
       ),
     },
     {
       header: "Created",
       key: "created_at",
-      render: (u) => <Text fontSize="sm">{formatDateShort(u.created_at)}</Text>,
+      render: (user) => <span className="text-sm text-fg-secondary">{formatDateShort(user.created_at)}</span>,
     },
     {
       header: "Actions",
       key: "actions" as keyof UserRow,
-      render: (u) => {
-        const validActions = getValidUserActions(u.admin_status);
-
+      render: (user) => {
+        const validActions = getValidUserActions(user.admin_status);
         return (
-          <HStack gap={0}>
+          <div className="flex items-center gap-1">
             <ViewUserDialog
-              user={u}
+              user={user}
               trigger={
-                <IconButton
-                  aria-label="View"
-                  title="View"
-                  variant="ghost"
-                  size="sm"
-                  rounded="md"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Eye size={16} />
-                </IconButton>
+                <Button variant="ghost" size="icon-sm" aria-label="View" title="View" onClick={(event) => event.stopPropagation()}>
+                  <Eye />
+                </Button>
               }
             />
             <EditUserDialog
-              user={u}
+              user={user}
               onUpdate={async (user_id, payload) => {
                 await updateUserDetailsMutation.mutateAsync({ user_id, payload });
               }}
               trigger={
-                <IconButton
-                  aria-label="Edit"
-                  title="Edit"
-                  variant="ghost"
-                  size="sm"
-                  rounded="md"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Pencil size={16} />
-                </IconButton>
+                <Button variant="ghost" size="icon-sm" aria-label="Edit" title="Edit" onClick={(event) => event.stopPropagation()}>
+                  <Pencil />
+                </Button>
               }
             />
 
             {validActions.length > 0 ? (
-              <Menu.Root>
-                <Menu.Trigger asChild>
-                  <IconButton
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     aria-label="More actions"
                     title="More actions"
-                    variant="ghost"
-                    size="sm"
-                    rounded="md"
-                    onClick={(e) => e.stopPropagation()}
-                    loading={updateUserStatusMutation.isPending}
+                    disabled={updateUserStatusMutation.isPending}
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    <MoreVertical size={16} />
-                  </IconButton>
-                </Menu.Trigger>
-                <Portal>
-                  <Menu.Positioner>
-                    <Menu.Content minW="180px" rounded="lg" shadow="lg" p={1}>
-                      {validActions.map((action) => {
-                        const config = USER_STATUS_ACTION_LABELS[action];
-                        return (
-                          <Menu.Item
-                            key={action}
-                            value={action}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateUserStatusMutation.mutate({
-                                user_id: u.user_id,
-                                nextStatus: config.nextStatus,
-                                note: `${config.label} by admin`,
-                              });
-                            }}
-                            rounded="md"
-                            px={3}
-                            py={2}
-                          >
-                            <Text fontSize="sm" color={config.color}>
-                              {config.label}
-                            </Text>
-                          </Menu.Item>
-                        );
-                      })}
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </Portal>
-              </Menu.Root>
+                    <MoreVertical />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuGroup>
+                    {validActions.map((action) => {
+                      const config = USER_STATUS_ACTION_LABELS[action];
+                      return (
+                        <DropdownMenuItem
+                          key={action}
+                          variant={config.variant}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            updateUserStatusMutation.mutate({
+                              user_id: user.user_id,
+                              nextStatus: config.nextStatus,
+                              note: `${config.label} by admin`,
+                            });
+                          }}
+                        >
+                          {config.label}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : null}
-          </HStack>
+          </div>
         );
       },
     },
   ];
 
   const historyOrgId = selectedUser?.organisation_id ?? "";
-
   const {
     data: historyData,
     isLoading: isHistoryLoading,
     isError: isHistoryError,
     error: historyError,
-  } = useUserActionHistory({
-    organisation_id: historyOrgId,
-    limit: 20,
-  });
+  } = useUserActionHistory({ organisation_id: historyOrgId, limit: 20 });
 
   return (
-    <Box w="full">
+    <div className="w-full">
       <PageHeader
         title="Users"
         breadcrumbs={[{ label: "home", href: "/" }, { label: "users" }]}
@@ -367,120 +320,65 @@ export default function UsersPage() {
         actions={
           <CreateUserDialog
             trigger={
-              <Button
-                bg={"purple.600"}
-                borderRadius={"6px"}
-                fontSize={"sm"}
-                fontWeight={"semibold"}
-                color={"white"}
-                _hover={{ bg: "purple.500" }}
-                padding={2}
-              >
-                <Plus /> Add User
+              <Button>
+                <Plus data-icon="inline-start" />
+                Add User
               </Button>
             }
           />
         }
       />
 
-      <Box w="full" maxW="7xl" mx="auto" px={{ base: 4, md: 10 }} mt={6}>
-        {isLoading ? (
-          <Stack w="full" maxW="6xl" mt={6} gap={4}>
-            <Skeleton height="40px" rounded="md" />
-            <Box borderWidth="1px" borderColor={cardBorder} rounded="lg" p={4} bg={cardBg}>
-              <Stack gap={3}>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <HStack key={i} gap={3}>
-                    <Skeleton height="24px" flex={2} rounded="md" />
-                    <Skeleton height="24px" flex={2} rounded="md" />
-                    <Skeleton height="24px" flex={2} rounded="md" />
-                    <Skeleton height="24px" flex={1} rounded="md" />
-                    <Skeleton height="24px" flex={1} rounded="md" />
-                  </HStack>
-                ))}
-              </Stack>
-            </Box>
-          </Stack>
-        ) : isError ? (
-          <Stack align="center" justify="center" py={16} gap={4} textAlign="center">
-            <Text fontSize="lg" color="red.500">
-              {error?.message || "Failed to load users"}
-            </Text>
+      <AdminPageShell>
+        {isLoading ? <TableLoadingState /> : null}
+
+        {isError ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+            <p className="text-lg font-medium text-destructive">{error?.message || "Failed to load users"}</p>
             <Button onClick={() => refetch()}>Retry</Button>
-          </Stack>
-        ) : rows.length === 0 ? (
-          <Stack align="center" justify="center" py={16} gap={5} textAlign="center" w="full">
-            <Box
-              bg={cardBg}
-              borderWidth="1px"
-              borderColor={cardBorder}
-              rounded="lg"
-              p={10}
-              maxW="lg"
-              w="full"
-              boxShadow="sm"
-            >
-              <Stack align="center" gap={3}>
-                <Box
-                  bg={iconBg}
-                  color={iconColor}
-                  rounded="full"
-                  boxSize={16}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Icon as={SearchX} boxSize={8} />
-                </Box>
-                <Text fontSize="xl" fontWeight="semibold">
-                  No users found
-                </Text>
-                <Text fontSize="sm" color={muted} maxW="md">
-                  Create your first user or adjust the organization filter.
-                </Text>
-              </Stack>
-            </Box>
-          </Stack>
-        ) : (
-          <Stack
-            w="full"
-            gap={6}
-            direction={{ base: "column", lg: "row" }}
-            align={{ base: "stretch", lg: "flex-start" }}
-          >
-            {/* Left: table */}
-            <Stack flex="1" minW={0} gap={4}>
-              <HStack justify="space-between" align="center" gap={4} flexWrap="wrap">
-                <Stack gap={1}>
-                  <Text fontSize="sm" color={muted}>
-                    Filter
-                  </Text>
-                  <SelectRoot
-                    collection={orgCollection}
-                    value={[organisationFilterId ?? "__all__"]}
-                    onValueChange={(details: { value: string[] }) => {
-                      const v = details.value[0];
-                      setOrganisationFilterId(v === "__all__" ? undefined : v);
-                    }}
+          </div>
+        ) : null}
+
+        {!isLoading && !isError && rows.length === 0 ? (
+          <div className="flex w-full justify-center py-16 text-center">
+            <div className="flex w-full max-w-lg flex-col items-center gap-3 rounded-lg border border-border bg-surface-primary p-10 shadow-xs">
+              <div className="grid size-16 place-items-center rounded-full bg-brand-subtle text-brand-primary">
+                <SearchX />
+              </div>
+              <p className="text-xl font-semibold text-fg-primary">No users found</p>
+              <p className="max-w-md text-sm text-fg-secondary">Create your first user or adjust the organization filter.</p>
+            </div>
+          </div>
+        ) : null}
+
+        {!isLoading && !isError && rows.length > 0 ? (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex min-w-[260px] flex-col gap-1">
+                  <label className="text-sm font-medium text-fg-secondary">Filter</label>
+                  <Select
+                    value={organisationFilterId ?? "__all__"}
+                    onValueChange={(value) => setOrganisationFilterId(value === "__all__" ? undefined : value)}
                     disabled={isOrgsLoading}
                   >
-                    <SelectTrigger minW={{ base: "260px", md: "320px" }}>
-                      <SelectValueText placeholder="All organisations" />
+                    <SelectTrigger className="w-full md:w-80">
+                      <SelectValue placeholder="All organisations" />
                     </SelectTrigger>
                     <SelectContent>
-                      {orgCollection.items.map((org) => (
-                        <SelectItem item={org} key={org.organisation_id}>
-                          {org.organisation_name}
-                        </SelectItem>
-                      ))}
+                      <SelectGroup>
+                        {organisationsWithAll.map((organization) => (
+                          <SelectItem key={organization.organisation_id} value={organization.organisation_id}>
+                            {organization.organisation_name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
-                  </SelectRoot>
-                </Stack>
+                  </Select>
+                </div>
 
-                <Text fontSize="sm" color={muted}>
-                  Showing {rows.length} user{rows.length !== 1 ? "s" : ""}
-                </Text>
-              </HStack>
+                <p className="text-sm text-fg-secondary">Showing {rows.length} user{rows.length !== 1 ? "s" : ""}</p>
+              </div>
 
               <CustomTable
                 data={rows}
@@ -491,17 +389,15 @@ export default function UsersPage() {
                 onRowClick={(row) => setSelectedUserId(String(row.id))}
               />
 
-              <HStack justify="space-between" w="full">
-                <Text fontSize="sm" color={muted}>
-                  Page size {PAGE_SIZE}
-                </Text>
-                <HStack gap={2}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-fg-secondary">Page size {PAGE_SIZE}</p>
+                <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => {
                       const prev = cursorHistory[cursorHistory.length - 1] ?? null;
-                      setCursorHistory((h) => h.slice(0, -1));
+                      setCursorHistory((history) => history.slice(0, -1));
                       setCursor(prev === "__first__" ? null : prev);
                     }}
                     disabled={cursorHistory.length === 0 || isFetching}
@@ -513,7 +409,7 @@ export default function UsersPage() {
                     variant="outline"
                     onClick={() => {
                       if (data?.cursor) {
-                        setCursorHistory((h) => [...h, cursor ?? "__first__"]);
+                        setCursorHistory((history) => [...history, cursor ?? "__first__"]);
                         setCursor(data.cursor);
                       }
                     }}
@@ -521,99 +417,53 @@ export default function UsersPage() {
                   >
                     Next
                   </Button>
-                </HStack>
-              </HStack>
-            </Stack>
+                </div>
+              </div>
+            </div>
 
-            {/* Right: history */}
-            <Box
-              w={{ base: "full", lg: "360px" }}
-              bg={panelBg}
-              borderWidth="1px"
-              borderColor={panelBorder}
-              rounded="lg"
-              overflow="hidden"
-              position={{ base: "static", lg: "sticky" }}
-              top={{ base: "auto", lg: 4 }}
-            >
-              <Box p={4}>
-                <Stack gap={1}>
-                  <Text fontSize="md" fontWeight="semibold">
-                    History
-                  </Text>
-                  <Text fontSize="sm" color={muted} lineClamp={1}>
+            <aside className="overflow-hidden rounded-lg border border-border bg-surface-primary shadow-xs lg:sticky lg:top-4">
+              <div className="p-4">
+                <div className="flex flex-col gap-1">
+                  <p className="text-base font-semibold text-fg-primary">History</p>
+                  <p className="truncate text-sm text-fg-secondary">
                     {selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : "Select a user"}
-                  </Text>
-                </Stack>
-              </Box>
+                  </p>
+                </div>
+              </div>
               <Separator />
 
-              <Box p={4}>
+              <div className="p-4">
                 {!selectedUser ? (
-                  <Text fontSize="sm" color={muted}>
-                    Select a user to view organization history.
-                  </Text>
+                  <p className="text-sm text-fg-secondary">Select a user to view organization history.</p>
                 ) : isHistoryLoading ? (
-                  <Stack gap={3}>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Skeleton key={i} height="64px" rounded="md" />
-                    ))}
-                  </Stack>
+                  <div className="flex flex-col gap-3">
+                    {Array.from({ length: 5 }).map((_, index) => <Skeleton key={index} className="h-16 rounded-md" />)}
+                  </div>
                 ) : isHistoryError ? (
-                  <Text fontSize="sm" color="red.500">
-                    {historyError?.message || "Failed to load history"}
-                  </Text>
+                  <p className="text-sm text-destructive">{historyError?.message || "Failed to load history"}</p>
                 ) : !historyData || historyData.history.length === 0 ? (
-                  <Text fontSize="sm" color={muted}>
-                    No history available.
-                  </Text>
+                  <p className="text-sm text-fg-secondary">No history available.</p>
                 ) : (
-                  <Stack
-                    gap={2}
-                    maxH={{ base: "auto", lg: "560px" }}
-                    overflowY={{ base: "visible", lg: "auto" }}
-                    pe={{ base: 0, lg: 1 }}
-                  >
-                    {historyData.history.map((h) => (
-                      <Box
-                        key={h.id}
-                        borderWidth="1px"
-                        borderColor={panelBorder}
-                        rounded="md"
-                        p={3}
-                      >
-                        <HStack justify="space-between" align="center" gap={3}>
-                          <Badge
-                            colorPalette={historyActionPalette[h.action] ?? "gray"}
-                            variant="subtle"
-                            rounded="full"
-                            px={2}
-                            py={0.5}
-                            textTransform="capitalize"
-                          >
-                            {h.action.replaceAll("_", " ")}
+                  <div className="flex max-h-[560px] flex-col gap-2 overflow-y-auto pr-1">
+                    {historyData.history.map((history) => (
+                      <div key={history.id} className="rounded-md border border-border bg-surface-primary p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <Badge variant={historyActionVariant[history.action] ?? "secondary"} className="capitalize">
+                            {history.action.replaceAll("_", " ")}
                           </Badge>
-                          <Text fontSize="xs" color={muted} whiteSpace="nowrap">
-                            {formatDateShort(h.created_at)}
-                          </Text>
-                        </HStack>
-                        <Text fontSize="sm" mt={2} color={h.note ? "inherit" : muted}>
-                          {h.note || "—"}
-                        </Text>
-                        {h.actor_admin_name ? (
-                          <Text fontSize="xs" color={muted} mt={1}>
-                            by {h.actor_admin_name}
-                          </Text>
-                        ) : null}
-                      </Box>
+                          <span className="whitespace-nowrap text-xs text-fg-secondary">{formatDateShort(history.created_at)}</span>
+                        </div>
+                        <p className="mt-2 text-sm text-fg-primary">{history.note || "-"}</p>
+                        {history.actor_admin_name ? <p className="mt-1 text-xs text-fg-secondary">by {history.actor_admin_name}</p> : null}
+                      </div>
                     ))}
-                  </Stack>
+                  </div>
                 )}
-              </Box>
-            </Box>
-          </Stack>
-        )}
-      </Box>
-    </Box>
+              </div>
+            </aside>
+          </div>
+        ) : null}
+      </AdminPageShell>
+    </div>
   );
 }

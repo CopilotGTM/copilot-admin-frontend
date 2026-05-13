@@ -1,27 +1,95 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Flex, Text, HStack, Icon, Button, Image, Stack, Badge, Menu, Portal as ChakraPortal, Skeleton, Separator } from "@chakra-ui/react";
-import { PageHeader } from "@/components/layout";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Ban,
+  CheckCircle2,
+  Eye,
+  MoreVertical,
+  PauseCircle,
+  Pencil,
+  PlayCircle,
+  Plus,
+  XCircle,
+} from "lucide-react";
+import { PageHeader } from "@/components/layout";
+import { AdminPageShell } from "@/components/layout/page-shell";
+import CreateUserDialog from "@/components/organizations/dialogs/create-user-dialog";
+import EditOrgDialog from "@/components/organizations/dialogs/edit-org-dialog";
+import EditUserDialog from "@/components/organizations/dialogs/edit-user-dialog";
+import ViewUserDialog from "@/components/organizations/dialogs/view-user-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CustomTable, type Column } from "@/components/ui/custom-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toaster } from "@/components/ui/toaster";
 import { getOrganization, updateOrganization } from "@/modules/organizations/api";
 import type { OrganizationDetail, UpdateOrganizationRequest } from "@/modules/organizations/types";
-import { listUsers, createUser, updateUserDetails, updateUserAdminStatus } from "@/modules/users/api";
-import type { UserListItem, AdminUserStatus } from "@/modules/users/types";
-import { useColorModeValue } from "@/components/ui/color-mode";
-import { Pencil, Plus, Eye, MoreVertical, CheckCircle2, XCircle, PauseCircle, PlayCircle, Ban } from "lucide-react";
-import { toaster } from "@/components/ui/toaster";
+import { createUser, listUsers, updateUserAdminStatus, updateUserDetails } from "@/modules/users/api";
+import { useUserActionHistory } from "@/modules/users/hooks";
+import type { AdminUserStatus, SupabaseUserStatus, UserEventType, UserListItem } from "@/modules/users/types";
+import { formatDateShort } from "@/lib/utils/format-date";
 
 // Status action types and helpers
 type UserStatusAction = "approve" | "reject" | "suspend" | "reinstate" | "deactivate";
 
-const USER_STATUS_ACTIONS: Record<UserStatusAction, { label: string; nextStatus: AdminUserStatus; icon: React.ElementType; color: string }> = {
-  approve: { label: "Approve", nextStatus: "approved", icon: CheckCircle2, color: "green.600" },
-  reject: { label: "Reject", nextStatus: "rejected", icon: XCircle, color: "red.600" },
-  suspend: { label: "Suspend", nextStatus: "suspended", icon: PauseCircle, color: "orange.600" },
-  reinstate: { label: "Reinstate", nextStatus: "approved", icon: PlayCircle, color: "green.600" },
-  deactivate: { label: "Deactivate", nextStatus: "deactivated", icon: Ban, color: "red.600" },
+const USER_STATUS_ACTIONS: Record<
+  UserStatusAction,
+  {
+    label: string;
+    pastTense: string;
+    nextStatus: AdminUserStatus;
+    icon: React.ElementType;
+    destructive?: boolean;
+  }
+> = {
+  approve: { label: "Approve", pastTense: "approved", nextStatus: "approved", icon: CheckCircle2 },
+  reject: { label: "Reject", pastTense: "rejected", nextStatus: "rejected", icon: XCircle, destructive: true },
+  suspend: { label: "Suspend", pastTense: "suspended", nextStatus: "suspended", icon: PauseCircle },
+  reinstate: { label: "Reinstate", pastTense: "reinstated", nextStatus: "approved", icon: PlayCircle },
+  deactivate: { label: "Deactivate", pastTense: "deactivated", nextStatus: "deactivated", icon: Ban, destructive: true },
+};
+
+const supabaseStatusVariant: Record<SupabaseUserStatus, BadgeVariant> = {
+  ACTIVE: "success",
+  INACTIVE: "secondary",
+  PASSWORD_CHANGE_REQUIRED: "warning",
+};
+
+const adminStatusVariant: Record<AdminUserStatus, BadgeVariant> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "risk",
+  suspended: "warning",
+  deactivated: "secondary",
+};
+
+const userRoleVariant: Record<UserListItem["user_role"], BadgeVariant> = {
+  admin: "primary-subtle",
+  member: "secondary",
+};
+
+const historyActionVariant: Partial<Record<UserEventType, BadgeVariant>> = {
+  created: "info",
+  updated: "secondary",
+  status_changed: "primary-subtle",
+  role_changed: "primary-subtle",
+  deleted: "risk",
+  login: "success",
+  password_reset: "warning",
+  email_verified: "success",
+  field_changed: "secondary",
 };
 
 function getValidUserActions(adminStatus: AdminUserStatus): UserStatusAction[] {
@@ -39,27 +107,27 @@ function getValidUserActions(adminStatus: AdminUserStatus): UserStatusAction[] {
       return [];
   }
 }
-import EditOrgDialog from "@/components/organizations/dialogs/edit-org-dialog";
-import { CustomTable, type Column } from "@/components/ui/custom-table";
-import { format } from "date-fns";
-import { formatDateShort } from "@/lib/utils/format-date";
-import CreateUserDialog from "@/components/organizations/dialogs/create-user-dialog";
-import ViewUserDialog from "@/components/organizations/dialogs/view-user-dialog";
-import EditUserDialog from "@/components/organizations/dialogs/edit-user-dialog";
-import { useUserActionHistory } from "@/modules/users/hooks";
-import type { UserEventType } from "@/modules/users/types";
 
-const historyActionPalette: Partial<Record<UserEventType, string>> = {
-  created: "blue",
-  updated: "gray",
-  status_changed: "purple",
-  role_changed: "purple",
-  deleted: "red",
-  login: "green",
-  password_reset: "orange",
-  email_verified: "green",
-  field_changed: "gray",
-};
+function OrganizationLogo({ src, name }: { src: string; name: string }) {
+  return (
+    <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface-primary">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Organization logos are arbitrary external admin data. */}
+      <img src={src} alt={`${name} logo`} className="size-full object-contain" />
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <AdminPageShell className="flex flex-col gap-6">
+      <Skeleton className="h-8 w-52" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <Skeleton className="h-80 w-full" />
+        <Skeleton className="h-80 w-full" />
+      </div>
+    </AdminPageShell>
+  );
+}
 
 export default function OrganizationDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -80,60 +148,47 @@ export default function OrganizationDetailsPage() {
     },
   });
 
-  const cardBorder = useColorModeValue("gray.200", "gray.700");
-  const logoBackground = useColorModeValue("white", "gray.800");
-
   return (
-    <Box w="full">
+    <div className="w-full">
       <PageHeader
         title={data?.organisation_name || "Organization"}
-        breadcrumbs={[{ label: "home", href: "/" }, { label: "organizations", href: "/organizations" }, { label: data?.organisation_name || id }]}
-        leading={data?.logo_url ? (
-          <Box
-            boxSize={10}
-            border="1px solid"
-            borderColor={cardBorder}
-            rounded="md"
-            overflow="hidden"
-            bg={logoBackground}
-          >
-            <Image src={data.logo_url} alt="Logo" w="full" h="full" objectFit="contain" />
-          </Box>
-        ) : undefined}
-        actions={data ? (
-          <EditOrgDialog
-            org={data}
-            onUpdate={(id, payload) => updateOrgMutation.mutateAsync({ id, payload })}
-            trigger={
-              <Button
-                bg={"purple.600"}
-                borderRadius={"6px"}
-                fontSize={"sm"}
-                fontWeight={"semibold"}
-                color={"white"}
-                _hover={{ bg: "purple.500" }}
-                padding={2}
-              >
-                <Icon as={Pencil} boxSize={4} mr={2} /> Edit org
-              </Button>
-            }
-          />
-        ) : undefined}
+        breadcrumbs={[
+          { label: "home", href: "/" },
+          { label: "organizations", href: "/organizations" },
+          { label: data?.organisation_name || id },
+        ]}
+        leading={data?.logo_url ? <OrganizationLogo src={data.logo_url} name={data.organisation_name} /> : undefined}
+        actions={
+          data ? (
+            <EditOrgDialog
+              org={data}
+              onUpdate={(orgId, payload) => updateOrgMutation.mutateAsync({ id: orgId, payload })}
+              trigger={
+                <Button>
+                  <Pencil data-icon="inline-start" />
+                  Edit org
+                </Button>
+              }
+            />
+          ) : undefined
+        }
       />
 
-      <Flex direction="column" gap={6} px={10} mt={6}>
-        {isLoading ? <Text>Loading…</Text> : null}
-        {!isLoading && isError ? (
-          <Text color="red.500">{error.message || "Failed to load"}</Text>
-        ) : null}
-        {!isLoading && !isError && data ? (
-          <>
-            {/* Tabs */}
-            <UsersSection organisationId={id} />
-          </>
-        ) : null}
-      </Flex>
-    </Box>
+      {isLoading ? <LoadingState /> : null}
+      {!isLoading && isError ? (
+        <AdminPageShell>
+          <Alert variant="destructive">
+            <XCircle data-icon="inline-start" />
+            <AlertDescription>{error.message || "Failed to load organization."}</AlertDescription>
+          </Alert>
+        </AdminPageShell>
+      ) : null}
+      {!isLoading && !isError && data ? (
+        <AdminPageShell>
+          <UsersSection organisationId={id} />
+        </AdminPageShell>
+      ) : null}
+    </div>
   );
 }
 
@@ -143,30 +198,26 @@ interface UsersSectionProps {
 
 function UsersSection({ organisationId }: UsersSectionProps) {
   const queryClient = useQueryClient();
-  
-  // Cursor-based pagination
-  const PAGE_SIZE = 20;
+  const pageSize = 20;
   const [cursor, setCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<string[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
-    queryKey: ["users", { organisationId, limit: PAGE_SIZE, cursor }],
-    queryFn: () => listUsers({ organisation_id: organisationId, limit: PAGE_SIZE, cursor: cursor ?? undefined }),
+    queryKey: ["users", { organisationId, limit: pageSize, cursor }],
+    queryFn: () => listUsers({ organisation_id: organisationId, limit: pageSize, cursor: cursor ?? undefined }),
   });
 
-  const rows: (UserListItem & { id: string })[] = (data?.users || []).map((u) => ({ ...u, id: u.user_id }));
+  const rows: (UserListItem & { id: string })[] = (data?.users || []).map((user) => ({ ...user, id: user.user_id }));
 
-  // Auto-select first user when data loads
   React.useEffect(() => {
-    if (rows.length > 0 && (!selectedUserId || !rows.some((r) => r.user_id === selectedUserId))) {
+    if (rows.length > 0 && (!selectedUserId || !rows.some((row) => row.user_id === selectedUserId))) {
       setSelectedUserId(rows[0].user_id);
     }
   }, [rows, selectedUserId]);
 
-  const selectedUser = rows.find((r) => r.user_id === selectedUserId) ?? null;
+  const selectedUser = rows.find((row) => row.user_id === selectedUserId) ?? null;
 
-  // User action history for the organisation
   const {
     data: historyData,
     isLoading: isHistoryLoading,
@@ -177,106 +228,122 @@ function UsersSection({ organisationId }: UsersSectionProps) {
     limit: 20,
   });
 
+  const updateStatus = async (user: UserListItem, action: UserStatusAction) => {
+    const config = USER_STATUS_ACTIONS[action];
+
+    try {
+      await updateUserAdminStatus(user.user_id, {
+        admin_status: config.nextStatus,
+        note: `${config.label} by admin`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toaster.create({ title: `User ${config.pastTense}`, type: "success" });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to update status",
+        description: err instanceof Error ? err.message : "Unknown error",
+        type: "error",
+      });
+    }
+  };
+
   const columns: Column<UserListItem & { id: string }>[] = [
-    { header: "Name", key: "first_name", render: (u) => `${u.first_name} ${u.last_name}` },
+    { header: "Name", key: "first_name", render: (user) => `${user.first_name} ${user.last_name}` },
     { header: "Email", key: "email" },
     { header: "Role", key: "organisation_role" },
     { header: "Job Title", key: "job_title" },
     {
       header: "App Role",
       key: "user_role",
-      render: (u) => (
-        <Badge colorPalette={u.user_role === "admin" ? "purple" : "gray"} variant="subtle" textTransform="capitalize">
-          {u.user_role}
+      render: (user) => (
+        <Badge variant={userRoleVariant[user.user_role]} className="capitalize">
+          {user.user_role}
         </Badge>
       ),
     },
     {
       header: "Status",
       key: "status",
-      render: (u) => (
-        <HStack gap={2}>
-          <Badge variant="subtle">{u.status}</Badge>
-          <Badge variant="subtle" textTransform="capitalize">{u.admin_status}</Badge>
-        </HStack>
+      render: (user) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={supabaseStatusVariant[user.status]}>{user.status}</Badge>
+          <Badge variant={adminStatusVariant[user.admin_status]} className="capitalize">
+            {user.admin_status}
+          </Badge>
+        </div>
       ),
     },
-    { header: "Created", key: "created_at", render: (u) => format(new Date(u.created_at), "PP") },
+    { header: "Created", key: "created_at", render: (user) => format(new Date(user.created_at), "PP") },
     {
       header: "Actions",
       key: "actions" as keyof (UserListItem & { id: string }),
-      render: (u) => {
-        const validActions = getValidUserActions(u.admin_status);
+      render: (user) => {
+        const validActions = getValidUserActions(user.admin_status);
         return (
-          <HStack gap={1}>
+          <div className="flex items-center gap-1">
             <ViewUserDialog
-              user={u}
-              trigger={<Button variant="ghost" title="View"><Icon as={Eye} /></Button>}
+              user={user}
+              trigger={
+                <Button variant="ghost" size="icon-sm" title="View">
+                  <Eye />
+                </Button>
+              }
             />
             <EditUserDialog
-              user={u}
-              onUpdate={async (user_id, payload) => {
-                await updateUserDetails(user_id, payload);
+              user={user}
+              onUpdate={async (userId, payload) => {
+                await updateUserDetails(userId, payload);
                 queryClient.invalidateQueries({ queryKey: ["users"] });
               }}
-              trigger={<Button variant="ghost" title="Edit"><Icon as={Pencil} /></Button>}
+              trigger={
+                <Button variant="ghost" size="icon-sm" title="Edit">
+                  <Pencil />
+                </Button>
+              }
             />
-            {validActions.length > 0 && (
-              <Menu.Root>
-                <Menu.Trigger asChild>
-                  <Button variant="ghost" title="Status actions"><Icon as={MoreVertical} /></Button>
-                </Menu.Trigger>
-                <ChakraPortal>
-                  <Menu.Positioner>
-                    <Menu.Content minW="180px" rounded="lg" shadow="lg" p={1}>
-                      {validActions.map((action) => {
-                        const config = USER_STATUS_ACTIONS[action];
-                        return (
-                          <Menu.Item
-                            key={action}
-                            value={action}
-                            rounded="md"
-                            px={3}
-                            py={2}
-                            onClick={async () => {
-                              try {
-                                await updateUserAdminStatus(u.user_id, {
-                                  admin_status: config.nextStatus,
-                                  note: `${config.label} by admin`,
-                                });
-                                queryClient.invalidateQueries({ queryKey: ["users"] });
-                                toaster.create({ title: `User ${config.label.toLowerCase()}d`, type: "success" });
-                              } catch (err) {
-                                toaster.create({
-                                  title: "Failed to update status",
-                                  description: err instanceof Error ? err.message : "Unknown error",
-                                  type: "error",
-                                });
-                              }
-                            }}
-                          >
-                            <HStack gap={2}>
-                              <Icon as={config.icon} boxSize={4} color={config.color} />
-                              <Text fontSize="sm">{config.label}</Text>
-                            </HStack>
-                          </Menu.Item>
-                        );
-                      })}
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </ChakraPortal>
-              </Menu.Root>
-            )}
-          </HStack>
+            {validActions.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" title="Status actions">
+                    <MoreVertical />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <DropdownMenuGroup>
+                    {validActions.map((action) => {
+                      const config = USER_STATUS_ACTIONS[action];
+                      const Icon = config.icon;
+                      return (
+                        <DropdownMenuItem
+                          key={action}
+                          variant={config.destructive ? "destructive" : "default"}
+                          className="py-2"
+                          onSelect={() => {
+                            void updateStatus(user, action);
+                          }}
+                        >
+                          <Icon />
+                          {config.label}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         );
       },
     },
   ];
 
   return (
-    <Stack gap={4}>
-      <HStack justify="space-between">
-        <Text fontSize="lg" fontWeight="semibold">Users</Text>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-fg-primary">Users</h2>
+          <p className="mt-1 text-sm text-fg-muted">Manage users and review recent access history for this organization.</p>
+        </div>
         <CreateUserDialog
           organisationId={organisationId}
           onCreate={async (values) => {
@@ -284,44 +351,44 @@ function UsersSection({ organisationId }: UsersSectionProps) {
             queryClient.invalidateQueries({ queryKey: ["users"] });
           }}
           trigger={
-            <Button bg="purple.600" color="white" borderRadius="6px" _hover={{ bg: "purple.500" }}>
-              <Icon as={Plus} boxSize={4} mr={2} /> Add user
+            <Button>
+              <Plus data-icon="inline-start" />
+              Add user
             </Button>
           }
         />
-      </HStack>
-      {isLoading ? <Text>Loading users…</Text> : null}
+      </div>
+
+      {isLoading ? <UsersLoadingState /> : null}
       {!isLoading && isError ? (
-        <Text color="red.500">{error?.message || "Failed to load users"}</Text>
+        <Alert variant="destructive">
+          <XCircle data-icon="inline-start" />
+          <AlertDescription>{error?.message || "Failed to load users."}</AlertDescription>
+        </Alert>
       ) : null}
       {!isLoading && !isError ? (
-        <Stack
-          gap={6}
-          direction={{ base: "column", lg: "row" }}
-          align={{ base: "stretch", lg: "flex-start" }}
-        >
-          {/* Left: table */}
-          <Stack flex="1" minW={0} gap={4}>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="min-w-0">
             <CustomTable
               data={rows}
               columns={columns}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               hidePagination
               selectedRowId={selectedUserId ?? undefined}
               onRowClick={(row) => setSelectedUserId(String(row.id))}
             />
-            
-            <HStack justify="space-between" w="full">
-              <Text fontSize="sm" color="gray.500">
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-fg-secondary">
                 Showing {rows.length} user{rows.length !== 1 ? "s" : ""}
-              </Text>
-              <HStack gap={2}>
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => {
                     const prev = cursorHistory[cursorHistory.length - 1] ?? null;
-                    setCursorHistory((h) => h.slice(0, -1));
+                    setCursorHistory((history) => history.slice(0, -1));
                     setCursor(prev === "__first__" ? null : prev);
                   }}
                   disabled={cursorHistory.length === 0 || isFetching}
@@ -333,7 +400,7 @@ function UsersSection({ organisationId }: UsersSectionProps) {
                   variant="outline"
                   onClick={() => {
                     if (data?.cursor) {
-                      setCursorHistory((h) => [...h, cursor ?? "__first__"]);
+                      setCursorHistory((history) => [...history, cursor ?? "__first__"]);
                       setCursor(data.cursor);
                     }
                   }}
@@ -341,98 +408,83 @@ function UsersSection({ organisationId }: UsersSectionProps) {
                 >
                   Next
                 </Button>
-              </HStack>
-            </HStack>
-          </Stack>
+              </div>
+            </div>
+          </div>
 
-          {/* Right: history panel */}
-          <Box
-            w={{ base: "full", lg: "320px" }}
-            bg="white"
-            _dark={{ bg: "gray.900", borderColor: "gray.700" }}
-            borderWidth="1px"
-            borderColor="gray.200"
-            rounded="lg"
-            overflow="hidden"
-            position={{ base: "static", lg: "sticky" }}
-            top={{ base: "auto", lg: 4 }}
-          >
-            <Box p={4}>
-              <Stack gap={1}>
-                <Text fontSize="md" fontWeight="semibold">
-                  User History
-                </Text>
-                <Text fontSize="sm" color="gray.500" lineClamp={1}>
-                  {selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : "Select a user"}
-                </Text>
-              </Stack>
-            </Box>
-            <Separator />
-
-            <Box p={4}>
-              {isHistoryLoading ? (
-                <Stack gap={3}>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} height="64px" rounded="md" />
-                  ))}
-                </Stack>
-              ) : isHistoryError ? (
-                <Text fontSize="sm" color="red.500">
-                  {historyError?.message || "Failed to load history"}
-                </Text>
-              ) : !historyData || historyData.history.length === 0 ? (
-                <Text fontSize="sm" color="gray.500">
-                  No history available.
-                </Text>
-              ) : (
-                <Stack
-                  gap={2}
-                  maxH={{ base: "auto", lg: "400px" }}
-                  overflowY={{ base: "visible", lg: "auto" }}
-                  pe={{ base: 0, lg: 1 }}
-                >
-                  {historyData.history.map((h) => (
-                    <Box
-                      key={h.id}
-                      borderWidth="1px"
-                      borderColor="gray.200"
-                      _dark={{ borderColor: "gray.700" }}
-                      rounded="md"
-                      p={3}
-                    >
-                      <HStack justify="space-between" align="center" gap={3}>
-                        <Badge
-                          colorPalette={historyActionPalette[h.action] ?? "gray"}
-                          variant="subtle"
-                          rounded="full"
-                          px={2}
-                          py={0.5}
-                          textTransform="capitalize"
-                        >
-                          {h.action.replaceAll("_", " ")}
-                        </Badge>
-                        <Text fontSize="xs" color="gray.500" whiteSpace="nowrap">
-                          {formatDateShort(h.created_at)}
-                        </Text>
-                      </HStack>
-                      <Text fontSize="sm" mt={2} color={h.note ? "inherit" : "gray.500"}>
-                        {h.note || "—"}
-                      </Text>
-                      {h.actor_admin_name ? (
-                        <Text fontSize="xs" color="gray.500" mt={1}>
-                          by {h.actor_admin_name}
-                        </Text>
-                      ) : null}
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </Box>
-          </Box>
-        </Stack>
+          <UserHistoryPanel
+            selectedUser={selectedUser}
+            historyData={historyData}
+            isHistoryLoading={isHistoryLoading}
+            isHistoryError={isHistoryError}
+            historyError={historyError}
+          />
+        </div>
       ) : null}
-    </Stack>
+    </div>
   );
 }
 
-// Legacy square tab button removed; using Chakra Tabs instead
+function UsersLoadingState() {
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <Skeleton className="h-72 w-full" />
+      <Skeleton className="h-72 w-full" />
+    </div>
+  );
+}
+
+interface UserHistoryPanelProps {
+  selectedUser: UserListItem | null;
+  historyData: ReturnType<typeof useUserActionHistory>["data"];
+  isHistoryLoading: boolean;
+  isHistoryError: boolean;
+  historyError: Error | null;
+}
+
+function UserHistoryPanel({
+  selectedUser,
+  historyData,
+  isHistoryLoading,
+  isHistoryError,
+  historyError,
+}: Readonly<UserHistoryPanelProps>) {
+  return (
+    <aside className="overflow-hidden rounded-lg border border-border bg-surface-primary shadow-xs lg:sticky lg:top-4">
+      <div className="px-4 py-4">
+        <h3 className="text-base font-semibold text-fg-primary">User History</h3>
+        <p className="mt-1 truncate text-sm text-fg-muted">
+          {selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : "Select a user"}
+        </p>
+      </div>
+      <div className="border-t border-border px-4 py-4">
+        {isHistoryLoading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} className="h-16 w-full" />
+            ))}
+          </div>
+        ) : isHistoryError ? (
+          <p className="text-sm text-signal-risk">{historyError?.message || "Failed to load history."}</p>
+        ) : !historyData || historyData.history.length === 0 ? (
+          <p className="text-sm text-fg-muted">No history available.</p>
+        ) : (
+          <div className="flex max-h-[400px] flex-col gap-2 overflow-y-auto pr-1">
+            {historyData.history.map((item) => (
+              <div key={item.id} className="rounded-md border border-border bg-surface-secondary/40 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Badge variant={historyActionVariant[item.action] ?? "secondary"} className="h-auto whitespace-normal capitalize">
+                    {item.action.replaceAll("_", " ")}
+                  </Badge>
+                  <span className="shrink-0 text-xs text-fg-muted">{formatDateShort(item.created_at)}</span>
+                </div>
+                <p className={item.note ? "mt-2 text-sm text-fg-primary" : "mt-2 text-sm text-fg-muted"}>{item.note || "-"}</p>
+                {item.actor_admin_name ? <p className="mt-1 text-xs text-fg-muted">by {item.actor_admin_name}</p> : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}

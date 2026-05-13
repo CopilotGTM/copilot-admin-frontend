@@ -1,217 +1,147 @@
 "use client";
 
 import React from "react";
-import {
-  Button,
-  CloseButton,
-  Dialog,
-  Portal,
-  Text,
-  HStack,
-  Image,
-  Box,
-  Separator,
-  Badge,
-  Icon,
-  Stack,
-  Link,
-} from "@chakra-ui/react";
-import { FormControl, FormLabel } from "@chakra-ui/form-control";
-import { Globe, Link2, Image as ImageIcon } from "lucide-react";
-import type { OrganizationListItem } from "@/modules/organizations/types";
 import { format } from "date-fns";
+import { Globe, Image as ImageIcon, Link2 } from "lucide-react";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import type { OrganizationListItem } from "@/modules/organizations/types";
 
 export interface ViewOrgDialogProps {
   trigger: React.ReactNode;
   org: OrganizationListItem;
 }
 
-const statusColor: Record<OrganizationListItem["status"], string> = {
-  pending: "yellow",
-  approved: "green",
-  rejected: "red",
-  suspended: "orange",
-  deactivated: "gray",
-  provisioning: "blue",
-  failed: "red",
+const statusVariant: Record<OrganizationListItem["status"], BadgeVariant> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "risk",
+  suspended: "warning",
+  deactivated: "secondary",
+  provisioning: "info",
+  failed: "risk",
 };
 
 function formatDate(value?: string): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return format(d, "PPpp");
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return format(date, "PPpp");
+}
+
+function DetailItem({ label, value, className }: { label: string; value?: React.ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="flex min-h-18 flex-col gap-1 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+        <span className="text-xs font-semibold uppercase text-fg-muted">{label}</span>
+        <span className="break-words text-sm font-medium text-fg-primary">{value || "-"}</span>
+      </div>
+    </div>
+  );
+}
+
+function BadgeList({ items, variant = "secondary" }: { items?: string[]; variant?: BadgeVariant }) {
+  if (!items || items.length === 0) return <span className="text-sm text-fg-secondary">-</span>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item, index) => (
+        <Badge key={`${item}-${index}`} variant={variant} className="h-auto max-w-full whitespace-normal break-all py-1">
+          {item}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
+function LinkBadgeList({ items, icon: Icon, variant }: { items?: string[]; icon: React.ElementType; variant: BadgeVariant }) {
+  if (!items || items.length === 0) return <span className="text-sm text-fg-secondary">-</span>;
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((item, index) => (
+        <Badge key={`${item}-${index}`} variant={variant} asChild className="h-auto max-w-full py-1">
+          <a href={item} target="_blank" rel="noopener noreferrer" className="inline-flex min-w-0 items-center gap-1 break-all">
+            <Icon data-icon="inline-start" />
+            {item}
+          </a>
+        </Badge>
+      ))}
+    </div>
+  );
 }
 
 export default function ViewOrgDialog({ trigger, org }: Readonly<ViewOrgDialogProps>) {
   return (
-    <Dialog.Root placement="center" scrollBehavior="inside" size={"xl"} motionPreset="slide-in-bottom">
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Portal>
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content display="flex" flexDirection="column" maxH={{ base: "85vh", md: "80vh" }} rounded="xl" boxShadow="lg">
-            <Dialog.CloseTrigger asChild>
-              <CloseButton position="absolute" top="8px" right="8px" rounded="full" />
-            </Dialog.CloseTrigger>
+    <Dialog>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="max-h-[85dvh] gap-0 overflow-hidden p-0 sm:max-w-4xl">
+        <DialogHeader className="px-6 py-5">
+          <DialogTitle>Organization details</DialogTitle>
+          <DialogDescription>View all fields for {org.organisation_name}.</DialogDescription>
+        </DialogHeader>
+        <Separator />
 
-            <Dialog.Header>
-              <Stack gap={1}>
-                <Dialog.Title fontSize="lg" fontWeight="bold" lineHeight="28px" color="gray.700">
-                  Organization details
-                </Dialog.Title>
-                <Text fontSize="sm" color="gray.500">
-                  View all fields for {org.organisation_name}
-                </Text>
-              </Stack>
-            </Dialog.Header>
+        <div className="overflow-y-auto px-6 py-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <DetailItem label="ID" value={org.organisation_id} />
+            <DetailItem label="Status" value={<Badge variant={statusVariant[org.status]} className="capitalize">{org.status}</Badge>} />
+            <DetailItem label="Organization name" value={org.organisation_name} />
+            <DetailItem label="Agent name" value={org.agent_name} />
+            <DetailItem label="Country" value={org.country} />
+            <DetailItem label="Sales team size" value={org.sales_team_size} />
+            <DetailItem label="Active" value={org.is_active ? "Yes" : "No"} />
+            <DetailItem label="Company address" value={org.company_address} />
 
-            <Separator />
+            <DetailItem label="Domains" value={<BadgeList items={org.domain} variant="info" />} className="md:col-span-2" />
+            <DetailItem
+              label="Linked URLs"
+              value={<LinkBadgeList items={org.linked_urls} icon={Link2} variant="primary-subtle" />}
+              className="md:col-span-2"
+            />
+            <DetailItem
+              label="Website URLs"
+              value={<LinkBadgeList items={org.website_urls} icon={Globe} variant="secondary" />}
+              className="md:col-span-2"
+            />
+            <DetailItem label="Summary" value={<span className="whitespace-pre-wrap">{org.summary || "-"}</span>} className="md:col-span-2" />
 
-            <Dialog.Body flex="1 1 auto" overflowY="auto">
-              <Box display="grid" gridTemplateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4}>
-                <FormControl>
-                  <FormLabel>ID</FormLabel>
-                  <Text fontWeight="semibold">{org.organisation_id}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Status</FormLabel>
-                  <Badge colorPalette={statusColor[org.status]} variant="subtle" rounded="md" textTransform="capitalize">
-                    {org.status}
-                  </Badge>
-                </FormControl>
+            <div className="md:col-span-2">
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-surface-secondary/40 px-3 py-2.5">
+                <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-fg-muted">
+                  <ImageIcon /> Logo
+                </span>
+                {org.logo_url ? (
+                  <div className="w-fit rounded-lg border border-border bg-surface-primary p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Organization logos are arbitrary external admin data. */}
+                    <img src={org.logo_url} alt="Organization logo" className="h-auto max-h-28 max-w-52 object-contain" />
+                  </div>
+                ) : (
+                  <span className="text-sm text-fg-secondary">-</span>
+                )}
+              </div>
+            </div>
 
-                <FormControl>
-                  <FormLabel>Organization Name</FormLabel>
-                  <Text fontWeight="semibold">{org.organisation_name}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Agent name</FormLabel>
-                  <Text fontWeight="semibold">{org.agent_name || "—"}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Country</FormLabel>
-                  <Text fontWeight="semibold">{org.country}</Text>
-                </FormControl>
+            <DetailItem label="Created at" value={formatDate(org.created_at)} />
+            <DetailItem label="Updated at" value={formatDate(org.updated_at)} />
+          </div>
+        </div>
 
-                <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                  <FormControl>
-                    <FormLabel>Domains</FormLabel>
-                    {org.domain && org.domain.length > 0 ? (
-                      <HStack gap={2} flexWrap="wrap">
-                        {org.domain.map((d, idx) => (
-                          <Badge key={`${d}-${idx}`} variant="subtle" colorPalette="blue" px={2} py={1} rounded="md">
-                            {d}
-                          </Badge>
-                        ))}
-                      </HStack>
-                    ) : (
-                      <Text color="gray.500">—</Text>
-                    )}
-                  </FormControl>
-                </Box>
-
-                <FormControl>
-                  <FormLabel>Sales team size</FormLabel>
-                  <Text fontWeight="semibold">{org.sales_team_size}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Active</FormLabel>
-                  <Text fontWeight="semibold">{org.is_active ? "Yes" : "No"}</Text>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Company address</FormLabel>
-                  <Text fontWeight="semibold">{org.company_address}</Text>
-                </FormControl>
-
-                <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                  <FormControl>
-                    <FormLabel display="flex" alignItems="center" gap={2}>
-                      <Icon as={Link2} /> Linked URLs
-                    </FormLabel>
-                    {org.linked_urls && org.linked_urls.length > 0 ? (
-                      <HStack gap={2} flexWrap="wrap">
-                        {org.linked_urls.map((u, idx) => (
-                          <Badge key={`${u}-${idx}`} variant="subtle" colorPalette="purple" px={2} py={1} rounded="md">
-                            <Link href={u} target="_blank" rel="noopener noreferrer">
-                              {u}
-                            </Link>
-                          </Badge>
-                        ))}
-                      </HStack>
-                    ) : (
-                      <Text color="gray.500">—</Text>
-                    )}
-                  </FormControl>
-                </Box>
-
-                <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                  <FormControl>
-                    <FormLabel display="flex" alignItems="center" gap={2}>
-                      <Icon as={Globe} /> Website URLs
-                    </FormLabel>
-                    {org.website_urls && org.website_urls.length > 0 ? (
-                      <HStack gap={2} flexWrap="wrap">
-                        {org.website_urls.map((u, idx) => (
-                          <Badge key={`${u}-${idx}`} variant="subtle" colorPalette="gray" px={2} py={1} rounded="md">
-                            <Link href={u} target="_blank" rel="noopener noreferrer">
-                              {u}
-                            </Link>
-                          </Badge>
-                        ))}
-                      </HStack>
-                    ) : (
-                      <Text color="gray.500">—</Text>
-                    )}
-                  </FormControl>
-                </Box>
-
-                <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                  <FormControl>
-                    <FormLabel>Summary</FormLabel>
-                    <Text fontWeight="semibold" whiteSpace="pre-wrap">{org.summary || "—"}</Text>
-                  </FormControl>
-                </Box>
-
-                <Box gridColumn={{ base: "auto", md: "1 / -1" }}>
-                  <FormControl>
-                    <FormLabel display="flex" alignItems="center" gap={2}>
-                      <Icon as={ImageIcon} /> Logo
-                    </FormLabel>
-                    {org.logo_url ? (
-                      <Box borderWidth="1px" rounded="lg" p={2} maxW="220px">
-                        <Image src={org.logo_url} alt="Logo" width="200px" height="auto" />
-                      </Box>
-                    ) : (
-                      <Text color="gray.500">—</Text>
-                    )}
-                  </FormControl>
-                </Box>
-
-                <FormControl>
-                  <FormLabel>Created at</FormLabel>
-                  <Text fontWeight="semibold">{formatDate(org.created_at)}</Text>
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Updated at</FormLabel>
-                  <Text fontWeight="semibold">{formatDate(org.updated_at)}</Text>
-                </FormControl>
-              </Box>
-            </Dialog.Body>
-
-            <Separator />
-
-            <Dialog.Footer>
-              <Dialog.ActionTrigger asChild>
-                <Button variant="outline" p={4} rounded="md">
-                  Close
-                </Button>
-              </Dialog.ActionTrigger>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Portal>
-    </Dialog.Root>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
