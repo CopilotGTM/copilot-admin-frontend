@@ -66,11 +66,17 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 --shell /sbin/nologin nextjs
 
 # ── Container hardening ─────────────────────────────────────────────────
-# 1. Remove package manager so attackers cannot install tools
+# 1. Remove OS and Node package managers so attackers cannot install tools
 # 2. Remove network utilities (wget, curl) to prevent tool download & data exfil
 # 3. Remove system info files that reveal OS / version
 # 4. Remove shells except /sbin/nologin (needed for user validation)
 RUN apk --no-cache del apk-tools alpine-keys \
+    && rm -rf /usr/local/lib/node_modules/npm \
+              /usr/local/lib/node_modules/corepack \
+              /usr/local/bin/npm \
+              /usr/local/bin/npx \
+              /usr/local/bin/corepack \
+              /opt/yarn-v* \
     && rm -f /usr/bin/wget /usr/bin/curl \
     && rm -f /etc/os-release /etc/alpine-release /etc/motd \
     && rm -rf /var/cache/apk /tmp/* /root/.cache \
