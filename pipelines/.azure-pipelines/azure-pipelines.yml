@@ -33,9 +33,9 @@ variables:
 
   # Environment-specific agent pools
   - name: DEV_AGENT_POOL
-    value: 'StaticAgentPool'
+    value: 'copilot-devops-dev-fast'
   - name: PROD_AGENT_POOL
-    value: 'StaticAgentPool-prod'
+    value: 'copilot-devops-prod-deploy'
 
   # ==========================================================================
   # Environment-specific URLs (defined in pipeline, not variable groups)
@@ -61,7 +61,7 @@ stages:
       - job: Build
         displayName: "Build and Push to ACR"
         pool:
-          name: 'StaticAgentPool'
+          name: 'copilot-devops-dev-fast'
         steps:
           - checkout: self
 
@@ -128,7 +128,7 @@ stages:
       - job: Build
         displayName: "Build and Push to ACR"
         pool:
-          name: 'StaticAgentPool-prod'
+          name: 'copilot-devops-prod-deploy'
         steps:
           - checkout: self
 
