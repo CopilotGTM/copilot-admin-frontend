@@ -35,9 +35,55 @@ export interface OrganizationListItem {
   updated_at: string;
   /** Active provisioning job, if any (present for status=provisioning) */
   active_job?: ActiveJob;
+  preferences?: OrganisationPreferences;
 }
 
 export type OrganizationDetail = OrganizationListItem;
+
+export type OrganisationCrmProvider = "copilotgtm" | "hubspot" | "salesforce";
+export type LegacyOrganisationCrmProvider = "copilot_gtm";
+export type OrganisationCrmMode = "internal" | "external";
+export type OrganisationChannelSource = "slack" | "whatsapp" | "teams" | "google_chat";
+
+export interface OrganisationCrmSettings {
+  provider: OrganisationCrmProvider;
+  mode: OrganisationCrmMode;
+  write_policy: {
+    allowed_scopes: string[];
+  };
+}
+
+export interface OrganisationChannelSettings {
+  enabled: OrganisationChannelSource[];
+}
+
+export interface OrganisationAppSettings {
+  crm: OrganisationCrmSettings;
+  channels: OrganisationChannelSettings;
+  capabilities: OrganisationCapabilities;
+}
+
+export interface OrganisationCapabilities {
+  [key: string]: boolean;
+}
+
+export interface OrganisationPreferences {
+  crm?: Partial<OrganisationCrmSettings> & {
+    source?: OrganisationCrmProvider | LegacyOrganisationCrmProvider;
+    writes_enabled?: boolean;
+  };
+  channels?: Partial<OrganisationChannelSettings>;
+  capabilities?: OrganisationCapabilities;
+  integrations?: {
+    enabled_sources?: OrganisationChannelSource[];
+  };
+  [key: string]: unknown;
+}
+
+export interface UpdateOrganisationAppSettingsRequest {
+  crm?: Pick<OrganisationCrmSettings, "provider">;
+  channels?: OrganisationChannelSettings;
+}
 
 export interface ListOrganizationsResponse {
   organizations: OrganizationListItem[];
