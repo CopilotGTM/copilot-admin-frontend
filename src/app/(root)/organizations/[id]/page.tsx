@@ -13,6 +13,8 @@ import {
   Pencil,
   PlayCircle,
   Plus,
+  Settings,
+  Users,
   XCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout";
@@ -34,8 +36,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toaster } from "@/components/ui/toaster";
-import { getOrganization, updateOrganization } from "@/modules/organizations/api";
-import type { OrganizationDetail, UpdateOrganizationRequest } from "@/modules/organizations/types";
+import { getOrganization, updateOrganisationAppSettings, updateOrganization } from "@/modules/organizations/api";
+import { OrganizationAppSettings } from "@/modules/organizations/components/organization-app-settings";
+import type {
+  OrganisationAppSettings,
+  OrganizationDetail,
+  UpdateOrganizationRequest,
+} from "@/modules/organizations/types";
 import { createUser, listUsers, updateUserAdminStatus, updateUserDetails } from "@/modules/users/api";
 import { useUserActionHistory } from "@/modules/users/hooks";
 import type { AdminUserStatus, SupabaseUserStatus, UserEventType, UserListItem } from "@/modules/users/types";
@@ -132,6 +139,7 @@ function LoadingState() {
 export default function OrganizationDetailsPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
+  const [activeTab, setActiveTab] = useState<"users" | "settings">("users");
 
   const { data, isLoading, isError, error } = useQuery<OrganizationDetail, Error>({
     queryKey: ["organization", id],
@@ -145,6 +153,31 @@ export default function OrganizationDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organization", id] });
       queryClient.invalidateQueries({ queryKey: ["organizations"] });
+    },
+  });
+
+  const updateAppSettingsMutation = useMutation<
+    OrganizationDetail,
+    Error,
+    { id: string; settings: OrganisationAppSettings }
+  >({
+    mutationFn: ({ id, settings }) =>
+      updateOrganisationAppSettings(id, {
+        crm: { provider: settings.crm.provider },
+        channels: settings.channels,
+      }),
+    onSuccess: (updatedOrg) => {
+      queryClient.setQueryData(["organization", id], updatedOrg);
+      queryClient.invalidateQueries({ queryKey: ["organization", id] });
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      toaster.create({ title: "Organization settings saved", type: "success" });
+    },
+    onError: (err) => {
+      toaster.create({
+        title: "Failed to save settings",
+        description: err.message,
+        type: "error",
+      });
     },
   });
 
@@ -184,8 +217,36 @@ export default function OrganizationDetailsPage() {
         </AdminPageShell>
       ) : null}
       {!isLoading && !isError && data ? (
-        <AdminPageShell>
-          <UsersSection organisationId={id} />
+        <AdminPageShell className="flex flex-col gap-5">
+          <div className="flex w-fit rounded-lg border border-border bg-surface-secondary p-1">
+            <Button
+              type="button"
+              variant={activeTab === "users" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("users")}
+            >
+              <Users data-icon="inline-start" />
+              Users
+            </Button>
+            <Button
+              type="button"
+              variant={activeTab === "settings" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("settings")}
+            >
+              <Settings data-icon="inline-start" />
+              Settings
+            </Button>
+          </div>
+
+          {activeTab === "users" ? <UsersSection organisationId={id} /> : null}
+          {activeTab === "settings" ? (
+            <OrganizationAppSettings
+              org={data}
+              isSaving={updateAppSettingsMutation.isPending}
+              onSave={(settings) => updateAppSettingsMutation.mutateAsync({ id, settings })}
+            />
+          ) : null}
         </AdminPageShell>
       ) : null}
     </div>

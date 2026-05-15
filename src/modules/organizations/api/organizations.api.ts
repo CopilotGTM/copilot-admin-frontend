@@ -7,6 +7,7 @@ import type {
   CreateOrganizationRequest,
   UpdateOrganizationRequest,
   UpdateOrganizationStatusRequest,
+  UpdateOrganisationAppSettingsRequest,
   OrganisationHistoryResponse,
   UpdateStatusResponse,
   CountriesResponse,
@@ -78,6 +79,20 @@ export async function updateOrganizationStatus(
   );
   if (res.data.status !== "SUCCESS" || !res.data.data) {
     throw new Error(res.data.message || "Failed to update status");
+  }
+  return res.data.data;
+}
+
+export async function updateOrganisationAppSettings(
+  organisation_id: string,
+  payload: UpdateOrganisationAppSettingsRequest,
+): Promise<OrganizationDetail> {
+  const res = await axiosInstance.patch<ApiResponse<OrganizationDetail>>(
+    `${BASE}/${organisation_id}/app-settings`,
+    payload,
+  );
+  if (res.data.status !== "SUCCESS" || !res.data.data) {
+    throw new Error(res.data.message || "Failed to update organization settings");
   }
   return res.data.data;
 }
