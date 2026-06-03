@@ -4,6 +4,7 @@ import type {
   OrganisationChannelSource,
   OrganisationCrmProvider,
   OrganisationCrmSettings,
+  OrganisationIntegrationSettings,
   OrganisationPreferences,
 } from "../types/organization.types";
 
@@ -42,11 +43,12 @@ export const CHANNEL_OPTIONS: {
 
 const INTERNAL_CRM_PROVIDER: OrganisationCrmProvider = "copilotgtm";
 
-type PartialAppSettingsInput = Omit<Partial<OrganisationAppSettings>, "crm" | "channels"> & {
+type PartialAppSettingsInput = Omit<Partial<OrganisationAppSettings>, "crm" | "channels" | "integrations"> & {
   crm?: Partial<OrganisationCrmSettings>;
   channels?: {
     enabled?: readonly OrganisationChannelSource[];
   };
+  integrations?: Partial<OrganisationIntegrationSettings>;
 };
 
 export const DEFAULT_CHANNEL_SOURCES = CHANNEL_OPTIONS.map((option) => option.value);
@@ -84,6 +86,11 @@ export function normalizePreferences(preferences: OrganisationPreferences | unde
     channels: {
       enabled: enabledChannels,
     },
+    integrations: {
+      google: {
+        gmail_read_enabled: preferences?.integrations?.google?.gmail_read_enabled === true,
+      },
+    },
     capabilities: preferences?.capabilities,
   });
 }
@@ -98,10 +105,16 @@ export function normalizeAppSettingsValue(
   const channels = {
     enabled: normalizeChannelSources(value?.channels?.enabled ?? DEFAULT_CHANNEL_SOURCES),
   };
+  const integrations = {
+    google: {
+      gmail_read_enabled: value?.integrations?.google?.gmail_read_enabled === true,
+    },
+  };
 
   return {
     crm,
     channels,
+    integrations,
     capabilities: normalizeCapabilities(value?.capabilities),
   };
 }
@@ -115,7 +128,9 @@ export function areAppSettingsEqual(
 
   return (
     normalizedLeft.crm.provider === normalizedRight.crm.provider &&
-    normalizedLeft.channels.enabled.join("|") === normalizedRight.channels.enabled.join("|")
+    normalizedLeft.channels.enabled.join("|") === normalizedRight.channels.enabled.join("|") &&
+    normalizedLeft.integrations.google.gmail_read_enabled ===
+      normalizedRight.integrations.google.gmail_read_enabled
   );
 }
 

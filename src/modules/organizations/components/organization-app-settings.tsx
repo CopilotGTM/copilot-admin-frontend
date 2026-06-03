@@ -46,6 +46,7 @@ export function OrganizationAppSettings({ org, isSaving, onSave }: OrganizationA
     CRM_PROVIDER_OPTIONS[0];
   const internalCrmEnabled = safeSettings.crm.provider === "copilotgtm";
   const internalWritesEnabled = safeSettings.crm.write_policy.allowed_scopes.length > 0;
+  const gmailReadEnabled = safeSettings.integrations.google.gmail_read_enabled;
   const hasChanges = !areAppSettingsEqual(safeSettings, normalizedOrgSettings);
 
   const setCrmProvider = (provider: OrganisationAppSettings["crm"]["provider"]) => {
@@ -69,6 +70,22 @@ export function OrganizationAppSettings({ org, isSaving, onSave }: OrganizationA
         ...normalizeAppSettingsValue(current),
         channels: {
           enabled: CHANNEL_OPTIONS.map((option) => option.value).filter((value) => currentSources.has(value)),
+        },
+      };
+    });
+  };
+
+  const setGmailReadEnabled = (enabled: boolean) => {
+    setSettings((current) => {
+      const normalized = normalizeAppSettingsValue(current);
+      return {
+        ...normalized,
+        integrations: {
+          ...normalized.integrations,
+          google: {
+            ...normalized.integrations.google,
+            gmail_read_enabled: enabled,
+          },
         },
       };
     });
@@ -131,6 +148,32 @@ export function OrganizationAppSettings({ org, isSaving, onSave }: OrganizationA
               );
             })}
           </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Google OAuth Permissions</CardTitle>
+            <CardDescription>Organisation-level Gmail scope controls for Google connection flows.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start justify-between gap-3 rounded-md border border-border p-4">
+              <div>
+                <p className="text-sm font-medium text-fg-primary">Gmail read access</p>
+                <p className="mt-1 text-sm text-fg-muted">
+                  Request Gmail read permission during Google OAuth for this organisation.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={gmailReadEnabled ? "secondary" : "outline"}
+                size="sm"
+                disabled={isSaving}
+                onClick={() => setGmailReadEnabled(!gmailReadEnabled)}
+              >
+                {gmailReadEnabled ? "Enabled" : "Disabled"}
+              </Button>
+            </div>
+          </CardContent>
           <CardFooter className="justify-end">
             <Button disabled={!hasChanges || isSaving} onClick={() => void onSave(safeSettings)}>
               <Save data-icon="inline-start" />
@@ -175,6 +218,12 @@ export function OrganizationAppSettings({ org, isSaving, onSave }: OrganizationA
                 <Badge variant="secondary">None</Badge>
               )}
             </div>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-fg-muted">Gmail read</span>
+            <Badge variant={gmailReadEnabled ? "success" : "secondary"}>
+              {gmailReadEnabled ? "Enabled" : "Disabled"}
+            </Badge>
           </div>
         </CardContent>
       </Card>

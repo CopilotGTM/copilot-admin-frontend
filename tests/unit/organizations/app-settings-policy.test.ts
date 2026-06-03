@@ -25,6 +25,20 @@ describe("app settings policy", () => {
     expect(settings.channels.enabled).toEqual(["slack", "teams"]);
   });
 
+  it("defaults Gmail read access to disabled unless explicitly enabled", () => {
+    expect(normalizePreferences(undefined).integrations.google.gmail_read_enabled).toBe(false);
+    expect(
+      normalizePreferences({
+        integrations: { google: {} },
+      }).integrations.google.gmail_read_enabled,
+    ).toBe(false);
+    expect(
+      normalizePreferences({
+        integrations: { google: { gmail_read_enabled: true } },
+      }).integrations.google.gmail_read_enabled,
+    ).toBe(true);
+  });
+
   it("derives no internal write scopes for external CRM providers", () => {
     const settings = normalizePreferences({
       crm: { provider: "hubspot" },
