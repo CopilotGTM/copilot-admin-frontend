@@ -17,6 +17,11 @@ Request payload:
   },
   "channels": {
     "enabled": ["slack", "whatsapp", "teams", "google_chat"]
+  },
+  "integrations": {
+    "google": {
+      "gmail_read_enabled": false
+    }
   }
 }
 ```
@@ -44,7 +49,7 @@ Do not send or read `internal_writes_enabled` or `write_policy.internal_records`
 ## Frontend File Map
 
 - `src/modules/organizations/types/organization.types.ts`
-  - Owns TypeScript types for `OrganisationPreferences`, `OrganisationAppSettings`, CRM providers, channels, and write scopes.
+  - Owns TypeScript types for `OrganisationPreferences`, `OrganisationAppSettings`, CRM providers, channels, Google integration settings, and write scopes.
 - `src/modules/organizations/lib/app-settings-policy.ts`
   - Normalizes backend preferences.
   - Applies only UI-safe defaults for missing provider/channel values.
@@ -52,7 +57,7 @@ Do not send or read `internal_writes_enabled` or `write_policy.internal_records`
 - `src/modules/organizations/api/organizations.api.ts`
   - Sends the narrow update payload to the backend app-settings endpoint.
 - `src/modules/organizations/components/organization-app-settings.tsx`
-  - Renders the CRM provider selector, messaging channel controls, and current write policy summary.
+  - Renders the CRM provider selector, messaging channel controls, Google OAuth permission controls, and current policy summary.
 - `src/app/(root)/organizations/[id]/page.tsx`
   - Renders the organisation Users and Settings tabs and delegates settings UI to the organizations module.
 - `tests/unit/organizations/app-settings-policy.test.ts`
@@ -71,6 +76,10 @@ Do not send or read `internal_writes_enabled` or `write_policy.internal_records`
 - Channels:
   - Missing channel preferences mean all supported channels are enabled.
   - The admin UI persists only `channels.enabled`.
+- Google:
+  - Missing Google preferences mean Gmail read access is disabled.
+  - The admin UI persists only `integrations.google.gmail_read_enabled`.
+  - `gmail_read_enabled` controls the Gmail read OAuth scope only; Gmail send remains a separate backend scope decision.
 
 ## Future Scope Controls
 

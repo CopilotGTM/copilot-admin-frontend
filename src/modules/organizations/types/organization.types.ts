@@ -57,9 +57,18 @@ export interface OrganisationChannelSettings {
   enabled: OrganisationChannelSource[];
 }
 
+export interface OrganisationGoogleIntegrationSettings {
+  gmail_read_enabled: boolean;
+}
+
+export interface OrganisationIntegrationSettings {
+  google: OrganisationGoogleIntegrationSettings;
+}
+
 export interface OrganisationAppSettings {
   crm: OrganisationCrmSettings;
   channels: OrganisationChannelSettings;
+  integrations: OrganisationIntegrationSettings;
   capabilities: OrganisationCapabilities;
 }
 
@@ -76,6 +85,7 @@ export interface OrganisationPreferences {
   capabilities?: OrganisationCapabilities;
   integrations?: {
     enabled_sources?: OrganisationChannelSource[];
+    google?: Partial<OrganisationGoogleIntegrationSettings>;
   };
   [key: string]: unknown;
 }
@@ -83,6 +93,9 @@ export interface OrganisationPreferences {
 export interface UpdateOrganisationAppSettingsRequest {
   crm?: Pick<OrganisationCrmSettings, "provider">;
   channels?: OrganisationChannelSettings;
+  integrations?: {
+    google?: Partial<OrganisationGoogleIntegrationSettings>;
+  };
 }
 
 export interface ListOrganizationsResponse {

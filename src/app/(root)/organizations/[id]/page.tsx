@@ -165,6 +165,11 @@ export default function OrganizationDetailsPage() {
       updateOrganisationAppSettings(id, {
         crm: { provider: settings.crm.provider },
         channels: settings.channels,
+        integrations: {
+          google: {
+            gmail_read_enabled: settings.integrations.google.gmail_read_enabled,
+          },
+        },
       }),
     onSuccess: (updatedOrg) => {
       queryClient.setQueryData(["organization", id], updatedOrg);
