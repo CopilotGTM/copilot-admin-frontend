@@ -217,6 +217,15 @@ export default function UsersPage() {
     },
     { header: "Role", key: "organisation_role" },
     {
+      header: "App Role",
+      key: "user_role",
+      render: (user) => (
+        <Badge variant={user.user_role === "admin" ? "primary-subtle" : "secondary"} className="capitalize">
+          {user.user_role}
+        </Badge>
+      ),
+    },
+    {
       header: "Status",
       key: "status",
       render: (user) => (
