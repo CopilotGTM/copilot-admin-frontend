@@ -2,8 +2,8 @@
 
 import React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Briefcase, IdCard, User as UserIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { Briefcase, IdCard, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import type { UpdateUserDetailsRequest, UserListItem } from "@/modules/users/types";
@@ -26,6 +34,7 @@ const editUserSchema = z.object({
   last_name: z.string().min(1),
   job_title: z.string().min(1),
   organisation_role: z.string().min(1),
+  user_role: z.enum(["member", "admin"]),
 });
 
 type EditUserInput = z.infer<typeof editUserSchema>;
@@ -52,6 +61,7 @@ function Field({ label, icon: Icon, error, children }: { label: string; icon: Re
 export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<EditUserDialogProps>) {
   const [open, setOpen] = React.useState(false);
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors, isSubmitting, isValid },
@@ -63,6 +73,7 @@ export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<Edi
       last_name: user.last_name,
       job_title: user.job_title,
       organisation_role: user.organisation_role,
+      user_role: user.user_role,
     },
   });
 
@@ -77,7 +88,7 @@ export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<Edi
       <DialogContent className="gap-0 p-0 sm:max-w-2xl">
         <DialogHeader className="px-6 py-5">
           <DialogTitle>Edit user</DialogTitle>
-          <DialogDescription>Update the user&apos;s profile and organization role metadata.</DialogDescription>
+          <DialogDescription>Update the user&apos;s profile, organization role, and app access role.</DialogDescription>
         </DialogHeader>
         <Separator />
 
@@ -95,6 +106,25 @@ export default function EditUserDialog({ trigger, user, onUpdate }: Readonly<Edi
             <Field label="Organization role" icon={IdCard} error={errors.organisation_role?.message}>
               <Input className="pl-10" placeholder="Project Owner" aria-invalid={!!errors.organisation_role} {...register("organisation_role")} />
             </Field>
+            <Controller
+              control={control}
+              name="user_role"
+              render={({ field }) => (
+                <Field label="App role" icon={ShieldCheck} error={errors.user_role?.message}>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full pl-10" aria-invalid={!!errors.user_role}>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+            />
           </div>
 
           <DialogFooter>
