@@ -1,3 +1,8 @@
+# CopilotGTM Admin Frontend
+
+**Project status:** CopilotGTM is no longer actively maintained. This code is shared
+as a reference. No ongoing support or security updates are planned.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -79,3 +84,15 @@ MUI theme definitions, global CSS, or other style-related config.
 	•	e2e/
 (Optional) Directory for Playwright test specs. By default, yarn create playwright creates a tests/ folder, but you can rename it to e2e/ or anything else you prefer.
 ```
+
+## Project team
+
+CopilotGTM was built by Nikhil Singhal, Saksham Bhutani, and Mrinmoy Nath.
+The commit history records the work of its contributors.
+
+## Related repositories
+
+- [Backend](https://github.com/CopilotGTM/copilot-backend)
+- [App frontend](https://github.com/CopilotGTM/copilot-app-frontend)
+- [Admin frontend](https://github.com/CopilotGTM/copilot-admin-frontend)
+- [Mobile app](https://github.com/CopilotGTM/gtm-mobile-app)
